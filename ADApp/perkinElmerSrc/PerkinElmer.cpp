@@ -117,6 +117,11 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
         printf("%s:%s epicsEventCreate failure for start acquisition event\n", driverName, functionName);
         return;
     }
+    this->stopAcquisitionEventId = epicsEventCreate(epicsEventEmpty);
+    if (!this->stopAcquisitionEventId) {
+        printf("%s:%s epicsEventCreate failure for stop acquisition event\n", driverName, functionName);
+        return;
+    }
 
     /* Allocate the raw buffer we use to compute images.  Only do this once */
     dims[0] = maxSizeX;
@@ -136,7 +141,7 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
     status |= setIntegerParam(addr, ADImageSize, 0);
     status |= setIntegerParam(addr, ADDataType, dataType);
     status |= setIntegerParam(addr, ADImageMode, ADImageContinuous);
-    status |= setDoubleParam (addr, ADAcquireTime, .001);
+    status |= setDoubleParam (addr, ADAcquireTime, 0.0665 );
     status |= setDoubleParam (addr, ADAcquirePeriod, .005);
     status |= setIntegerParam(addr, ADNumImages, 100);
 
@@ -304,6 +309,7 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
     return ((asynStatus) status);
 }
 
+
 //_____________________________________________________________________________________________
 
 asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
@@ -337,6 +343,8 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
               driverName, function, value);
     return status;
 }
+
+
 
 //_____________________________________________________________________________________________
 
@@ -397,7 +405,9 @@ void PerkinElmer::acquireTask()
 {
 int status = asynSuccess;
 int adstatus;
+int eventStatus;
 int addr=0;
+double pollTime = 0.01;
 
 	while (true)
 	{
@@ -405,10 +415,13 @@ int addr=0;
 
         //If in continuous mode, the new image is requested from the callback of the previous image
         //so the new image will fail because the hardware hasn't "finished" the old image
-        while (Acquisition_IsAcquiringData (hAcqDesc));
+        while (Acquisition_IsAcquiringData (hAcqDesc)) {
+	        eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
+		}
 
         getIntegerParam(addr, ADStatus, &adstatus);
         if (adstatus == ADStatusAcquire)
+			Acquisition_SetReady(hAcqDesc, 1);
         	acquireImage ();
 	}
 }
@@ -460,7 +473,7 @@ const char *functionName = "frameCallback";
     asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
          "%s:%s: calling imageData callback\n", driverName, functionName);
     doCallbacksGenericPointer(pImage, NDArrayData, addr);
-	this-lock();
+	this->lock();
 	/* See if acquisition is done */
     if (this->imagesRemaining > 0)
     {
@@ -780,6 +793,7 @@ HWND hWnd;
 WORD wBinning=1;
 int timings = 8;
 double 	m_pTimingsListBinning[8];
+double acqTime;
 int status = asynSuccess;
 int	iGain,
 	iTimeIndex,
@@ -802,6 +816,7 @@ DWORD 	dwDwellTime,
     status |= getIntegerParam(addr, PE_DwellTime, &iTimeIndex);
     status |= getIntegerParam(addr, PE_SyncTime, (int *) &dwSyncTime);
     status |= getIntegerParam(addr, PE_SyncMode, &iSyncMode);
+    status |= getDoubleParam(addr, ADAcquireTime, &acqTime);
     if (status)
     	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: error getting parameters\n",
@@ -878,13 +893,16 @@ DWORD 	dwDwellTime,
 		}
 
 		case PE_INTERNAL_TRIGGER : {
+			printf("AcquireTime %f\n", acqTime );
 			for (int loop=0;loop<timings;loop++)
 				printf ("m_pTimingsListBinning[%d] = %e\n", loop, m_pTimingsListBinning[loop]);
-			dwDwellTime = (DWORD) m_pTimingsListBinning[iTimeIndex];
+/*			dwDwellTime = (DWORD) m_pTimingsListBinning[iTimeIndex];*/
+			dwDwellTime = (DWORD) acqTime * 1000000;
 			printf ("internal timer requested: %d\n", dwDwellTime);
 
 			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_INTERNAL_TIMER);
 			error = Acquisition_SetTimerSync(hAcqDesc, &dwDwellTime);
+
 			printf ("internal timer set: %d\n", dwDwellTime);
 			printf ("error: %d\n", error);
 
@@ -999,11 +1017,14 @@ DWORD 				HISError,
 	dataAcqStruct.iUseGain = iUseGain;
 	dataAcqStruct.iUsePixelCorrections = iUsePixelCorrection;
 	dataAcqStruct.pPerkinElmer = this;
+
 	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
 
 	if ((uiPEResult=Acquisition_DefineDestBuffers(hAcqDesc, pAcqBuffer,	iFrames, uiRows, uiColumns))!=HIS_ALL_OK)
 		printf("Error : %d  Acquisition_DefineDestBuffers failed!\n", uiPEResult);
 
+	Acquisition_ResetFrameCnt(hAcqDesc);
+	Acquisition_SetReady(hAcqDesc, 1);
 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
 	{
 		printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
