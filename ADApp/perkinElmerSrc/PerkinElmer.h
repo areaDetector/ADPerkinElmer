@@ -211,6 +211,7 @@ class PerkinElmer : public ADDriver
 public:
 int 				imagesRemaining;
 epicsEventId 		startAcquisitionEventId;
+epicsEventId 		stopAcquisitionEventId;
 NDArray 			*pRaw;
 
     PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDataType_t dataType, int maxBuffers, size_t maxMemory,
