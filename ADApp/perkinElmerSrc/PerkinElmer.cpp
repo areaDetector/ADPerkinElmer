@@ -1,4 +1,4 @@
-/* PerkinElmer.cpp
+ /* PerkinElmer.cpp
  *
  * This is a driver the PerkinElmer Image Plates
  *		Models:	XRD0820
@@ -8,6 +8,10 @@
  *
  * Created:  07/24/2008
  *
+ * Modified by John Hammonds
+ * 5/15/2009
+ * Fixed problems with frame buffers.  For continuous or large collection switch to use
+ * the detectors Continuous collection mode.
  */
 
 #include "PerkinElmer.h"
@@ -22,7 +26,8 @@ extern "C" int PerkinElmerConfig(const char *portName, int maxSizeX, int maxSize
 }
 
 //_____________________________________________________________________________________________
-
+/** This task is spawned by the constructor.  It in return runs acquireTask which
+    monitors and controls acquisition */
 static void acquireTaskC(void *drvPvt)
 {
     PerkinElmer *pPvt = (PerkinElmer *)drvPvt;
@@ -32,41 +37,55 @@ static void acquireTaskC(void *drvPvt)
 
 //_____________________________________________________________________________________________
 
-//callback function that is called by XISL every frame at end of data transfer
+/** callback function that is called by XISL every frame at end of data transfer */
 void CALLBACK OnEndFrameCallback(HACQDESC hAcqDesc)
 {
 DWORD			dwValue;
 AcqData_t 		*pUsrArgs;
 unsigned int	uiStatus;
+unsigned int    SizeX, SizeY;
+DWORD ActAcqFrame;
+DWORD ActBuffFrame;
+unsigned int buffOffset;
 
 	printf ("Acquire callback called...\n");
 
 	Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
+
+    /** find offset into secondary frame buffer */
+   	Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
 	pUsrArgs = ((AcqData_t *) dwValue);
+	SizeX = pUsrArgs->uiColumns;
+	SizeY = pUsrArgs->uiRows;
+	buffOffset = SizeX * SizeY * ((ActBuffFrame - 1)%pUsrArgs->numBufferFrames);
 
 	if (pUsrArgs->iAcqMode == PE_ACQUIRE_ACQUISITION)
 	{
+		/** Correct for detector offset and gain as necessary */
 		if ((pUsrArgs->iUseOffset) && (pUsrArgs->pOffsetBuffer != NULL))
 		{
 			if ((pUsrArgs->iUseGain) && (pUsrArgs->pGainBuffer != NULL))
-				uiStatus = Acquisition_DoOffsetGainCorrection (pUsrArgs->pDataBuffer, pUsrArgs->pDataBuffer, pUsrArgs->pOffsetBuffer, pUsrArgs->pGainBuffer, pUsrArgs->uiRows * pUsrArgs->uiColumns);
+				uiStatus = Acquisition_DoOffsetGainCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), &(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pOffsetBuffer, pUsrArgs->pGainBuffer, pUsrArgs->uiRows * pUsrArgs->uiColumns);
 			else
-				uiStatus = Acquisition_DoOffsetCorrection (pUsrArgs->pDataBuffer, pUsrArgs->pDataBuffer, pUsrArgs->pOffsetBuffer, pUsrArgs->uiRows * pUsrArgs->uiColumns);
+				uiStatus = Acquisition_DoOffsetCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), &(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pOffsetBuffer, pUsrArgs->uiRows * pUsrArgs->uiColumns);
 		}
 
+		/** correct for dead pixels as necessary */
 		if ((pUsrArgs->iUsePixelCorrections) && (pUsrArgs->pPixelCorrectionList != NULL))
-			uiStatus = Acquisition_DoPixelCorrection (pUsrArgs->pDataBuffer, pUsrArgs->pPixelCorrectionList);
+			uiStatus = Acquisition_DoPixelCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pPixelCorrectionList);
 
+		/** Call the routine that actually grabs the data */
 		((AcqData_t *) dwValue)->pPerkinElmer->frameCallback ();
 	}
 
 	printf ("Acquire callback done!\n");
 
+
 }
 
 //_____________________________________________________________________________________________
 
-//callback function that is called by XISL at end of acquisition
+/** callback function that is called by XISL at end of acquisition */
 void CALLBACK OnEndAcqCallback(HACQDESC hAcqDesc)
 {
 DWORD		dwValue;
@@ -77,12 +96,15 @@ AcqData_t 	*pUsrArgs;
 	Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
 	pUsrArgs = ((AcqData_t *) dwValue);
 
+	/* raise a flag to the user if offset data is available */
 	if (pUsrArgs->iAcqMode == PE_ACQUIRE_OFFSET)
 		pUsrArgs->pPerkinElmer->offsetCallback ();
 
 
+	/* raise a flag to the user if gain data is available */
 	if (pUsrArgs->iAcqMode == PE_ACQUIRE_GAIN)
 		pUsrArgs->pPerkinElmer->gainCallback ();
+
 
 	printf ("End Acquire callback done!\n");
 }
@@ -92,7 +114,7 @@ AcqData_t 	*pUsrArgs;
 //Public methods
 //_____________________________________________________________________________________________
 //_____________________________________________________________________________________________
-
+/** Constructor for this driver */
 PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDataType_t dataType, int maxBuffers,
                           size_t maxMemory, int priority, int stackSize)
     : ADDriver(portName, 1, ADLastDriverParam, maxBuffers, maxMemory, 0, 0, ASYN_CANBLOCK, 1, priority, stackSize), imagesRemaining(0), pRaw(NULL)
@@ -110,7 +132,7 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
 
 	bAcquiringOffset = false;
 	bAcquiringGain = false;
-
+	abortAcq = 0;
     /* Create the epicsEvents for signaling to the simulate task when acquisition starts and stops */
     this->startAcquisitionEventId = epicsEventCreate(epicsEventEmpty);
     if (!this->startAcquisitionEventId) {
@@ -178,7 +200,9 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
         printf("%s: unable to set camera parameters\n", functionName);
         return;
     }
-
+	/* initialize internal variables uses to hold time delayed information.*/
+    status |= getDoubleParam(addr, ADAcquireTime, &(this->acqTimeReq) );
+    this->acqTimeAct = this->acqTimeReq;
     initializeDetector ();
 
     /* Create the thread that updates the images */
@@ -251,8 +275,9 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
         if (!value && (adstatus != ADStatusIdle))
         {
             this->imagesRemaining = 0;
-
-            asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s: Idle!\n", driverName, functionName);
+			Acquisition_Abort(hAcqDesc);
+           	setIntegerParam(addr, ADStatus, ADStatusIdle);
+           asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s: Idle!\n", driverName, functionName);
         }
         break;
     case ADBinX:
@@ -316,6 +341,7 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 {
     int function = pasynUser->reason;
     asynStatus status = asynSuccess;
+    int retstat;
     int addr=0;
 
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
@@ -326,6 +352,12 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     switch (function)
     {
     case ADAcquireTime:
+        retstat |= getDoubleParam(addr, ADAcquireTime, &(this->acqTimeReq) );
+		printf ("Setting Requested Acquisition Time: %f\n", this->acqTimeReq);
+        retstat |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
+
+		break;
+
     case ADGain:
         break;
     }
@@ -401,6 +433,7 @@ void PerkinElmer::report(FILE *fp, int details)
 
 //_____________________________________________________________________________________________
 
+/** This task is spawned off in a new thread to watch over acquisition */
 void PerkinElmer::acquireTask()
 {
 int status = asynSuccess;
@@ -415,19 +448,37 @@ double pollTime = 0.01;
 
         //If in continuous mode, the new image is requested from the callback of the previous image
         //so the new image will fail because the hardware hasn't "finished" the old image
-        while (Acquisition_IsAcquiringData (hAcqDesc)) {
-	        eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
-		}
-
+		printf("hello1\n");
+		eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
         getIntegerParam(addr, ADStatus, &adstatus);
-        if (adstatus == ADStatusAcquire)
+       if (adstatus == ADStatusAcquire) {
+			printf ("acquireTask: Starting Acquisition\n");
 			Acquisition_SetReady(hAcqDesc, 1);
         	acquireImage ();
+	    }
+
+		while ( adstatus == ADStatusAcquire ) {
+			eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
+ 	       	getIntegerParam(addr, ADStatus, &adstatus);
+		}
+
+		if ( this->abortAcq == 1 ) {
+			printf ("acquireTask: Aborting Acquisition\n");
+			this->abortAcq = 0;
+ 	       	getIntegerParam(addr, ADAcquire, &adstatus);
+ 	        while (adstatus){
+ 	           getIntegerParam(addr, ADAcquire, &adstatus);
+			}
+	 	   Acquisition_Abort(this->hAcqDesc);
+		}
+
+
 	}
 }
 
 //_____________________________________________________________________________________________
 
+/** called from OnEndFrameCallback to process data from the detector into the pArray */
 void PerkinElmer::frameCallback()
 {
 /* This thread computes new image data and does the callbacks to send it to higher layers */
@@ -479,37 +530,31 @@ const char *functionName = "frameCallback";
     {
     	this->imagesRemaining--;
         asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s: %d images remaining.\n", driverName, functionName, imagesRemaining);
-		if (this->imagesRemaining != 0) {
-            setIntegerParam(addr, ADStatus, ADStatusAcquire);
-        	epicsEventSignal(this->startAcquisitionEventId);
-		}
-    }
-    if (this->imagesRemaining < 0)
-    {
-        setIntegerParam(addr, ADStatus, ADStatusAcquire);
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s: ...continuous acquisitions...\n", driverName, functionName);
-
-    	epicsEventSignal(this->startAcquisitionEventId);
-    }
+	}
     if (this->imagesRemaining == 0)
     {
 		printf("Aborting!!!\n");
-
 		status |= setIntegerParam(addr, ADAcquire, 0);
 		status |= setIntegerParam(addr, ADStatus, ADStatusIdle);
+	    callParamCallbacks(addr, addr);
+		this->abortAcq = 1;
 
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s: all acquisitions completed.\n", driverName, functionName);
 	}
-
     /* Call the callbacks to update any changes */
     callParamCallbacks(addr, addr);
 
     this->unlock();
+	if (abortAcq) {
+		epicsEventSignal(this->stopAcquisitionEventId);
+	}
+
 
 }
 
 //_____________________________________________________________________________________________
 
+/** Called from OnEndAcqCallback after offset data has been collected to flag to the user
+    that this data is available */
 void PerkinElmer::offsetCallback()
 {
 int 	addr=0,
@@ -529,6 +574,8 @@ int 	addr=0,
 
 //_____________________________________________________________________________________________
 
+/** Called from OnEndAcqCallback after gain data has been collected to flag to the user
+    that this data is available */
 void PerkinElmer::gainCallback()
 {
 int 	addr=0,
@@ -572,14 +619,26 @@ PerkinElmer::~PerkinElmer()
 //Private methods
 //_____________________________________________________________________________________________
 //_____________________________________________________________________________________________
-
+/** Move data from secondary frame buffer to the driver's data space */
 template <typename epicsType> void PerkinElmer::computeArray(int maxSizeX, int maxSizeY)
 {
+DWORD ActAcqFrame;
+DWORD ActBuffFrame;
+int frameBufferSize;
+int addr = 0;
+
+/* Find which slot in the secondary buffer is active. */
+Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
+getIntegerParam(addr, PE_NumFrameBuffersRBV, &frameBufferSize);
+
+printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
+
 epicsType *pData = (epicsType *)this->pRaw->pData;
+
 
 	for (int loopy=0; loopy<maxSizeY; loopy++)
 		for (int loopx=0; loopx<maxSizeX; loopx++)
-			(*pData++) = (epicsType)pAcqBuffer[(loopy*maxSizeX)+loopx];
+			(*pData++) = (epicsType)pAcqBuffer[(loopy*maxSizeX)+loopx + (maxSizeX*maxSizeY)*((ActBuffFrame-1)%frameBufferSize)];
 }
 
 //_____________________________________________________________________________________________
@@ -789,11 +848,10 @@ BOOL PerkinElmer::initializeDetector (void)
 {
 const char* functionName = "initializeDetector";
 ACQDESCPOS Pos = 0;
-HWND hWnd;
 WORD wBinning=1;
 int timings = 8;
 double 	m_pTimingsListBinning[8];
-double acqTime;
+/*double acqTime;*/
 int status = asynSuccess;
 int	iGain,
 	iTimeIndex,
@@ -803,6 +861,9 @@ int addr=0;
 int iFrames;
 DWORD 	dwDwellTime,
 		dwSyncTime;
+UINT devFrames, devRows, devColumns, devDataType, devSortFlags;
+BOOL devIrqEnabled;
+DWORD devAcqType, devSystemID, devSyncMode, devHwAccess;
 
 	printf("\n\nAttempting to initialize PE detector...\n");
 
@@ -816,7 +877,7 @@ DWORD 	dwDwellTime,
     status |= getIntegerParam(addr, PE_DwellTime, &iTimeIndex);
     status |= getIntegerParam(addr, PE_SyncTime, (int *) &dwSyncTime);
     status |= getIntegerParam(addr, PE_SyncMode, &iSyncMode);
-    status |= getDoubleParam(addr, ADAcquireTime, &acqTime);
+
     if (status)
     	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: error getting parameters\n",
@@ -893,18 +954,21 @@ DWORD 	dwDwellTime,
 		}
 
 		case PE_INTERNAL_TRIGGER : {
-			printf("AcquireTime %f\n", acqTime );
+			printf("Setting AcquireTime %f\n", this->acqTimeReq );
 			for (int loop=0;loop<timings;loop++)
 				printf ("m_pTimingsListBinning[%d] = %e\n", loop, m_pTimingsListBinning[loop]);
-/*			dwDwellTime = (DWORD) m_pTimingsListBinning[iTimeIndex];*/
-			dwDwellTime = (DWORD) acqTime * 1000000;
+			dwDwellTime = (DWORD) (this->acqTimeReq * 1000000);
 			printf ("internal timer requested: %d\n", dwDwellTime);
 
 			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_INTERNAL_TIMER);
 			error = Acquisition_SetTimerSync(hAcqDesc, &dwDwellTime);
 
-			printf ("internal timer set: %d\n", dwDwellTime);
+            this->acqTimeAct = dwDwellTime/1000000.;
+			printf ("internal timer set: %f\n", this->acqTimeAct);
+            status |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
+
 			printf ("error: %d\n", error);
+			callParamCallbacks();
 
 			break;
 		}
@@ -946,6 +1010,22 @@ DWORD 	dwDwellTime,
 	printf("Memory for %d frames allocated...\n", uiNumFrameBuffers);
 	printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
 
+	printf("Detector Configuration\n");
+
+	Acquisition_GetConfiguration( hAcqDesc, &devFrames, &devRows, &devColumns, &devDataType,
+									&devSortFlags, &devIrqEnabled, &devAcqType, &devSystemID, &devSyncMode,
+									&devHwAccess);
+
+	printf("     Number of frames: %d\n", devFrames);
+	printf("     Number of Rows: %d, Number of Columns: %d\n", devRows, devColumns);
+	printf("     Data type: %d\n", devDataType);
+	printf("     Sort Flags %d\n", devSortFlags);
+	printf("     IRQ Enabled %d\n", devIrqEnabled);
+	printf("     Acquisition Type %d\n", devAcqType);
+	printf("     SystemID %d\n", devSystemID);
+	printf("     Sync Mode %d\n", devSyncMode);
+	printf("     HW Access %d\n", devHwAccess);
+
 	//Update readback values
 	//let the user know what's going on...
 	status = 0;
@@ -971,7 +1051,8 @@ int 				iMode,
 					iUseOffset,
 					iUseGain,
 					iUsePixelCorrection,
-					addr=0;
+					addr=0,
+					numImages = 0;
 int 				status = asynSuccess;
 DWORD 				HISError,
 					FGError;
@@ -1017,19 +1098,51 @@ DWORD 				HISError,
 	dataAcqStruct.iUseGain = iUseGain;
 	dataAcqStruct.iUsePixelCorrections = iUsePixelCorrection;
 	dataAcqStruct.pPerkinElmer = this;
+	dataAcqStruct.numBufferFrames = iFrames;
 
 	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
-
 	if ((uiPEResult=Acquisition_DefineDestBuffers(hAcqDesc, pAcqBuffer,	iFrames, uiRows, uiColumns))!=HIS_ALL_OK)
 		printf("Error : %d  Acquisition_DefineDestBuffers failed!\n", uiPEResult);
 
+
 	Acquisition_ResetFrameCnt(hAcqDesc);
 	Acquisition_SetReady(hAcqDesc, 1);
-	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
-	{
-		printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
-		Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-		printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+	switch (iMode) {
+		case ADImageSingle:
+	 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
+		{
+			printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
+			Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+			printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+		}
+        break;
+    	case ADImageMultiple:
+		getIntegerParam(addr, ADNumImages, &numImages);
+    	if ( numImages > uiNumFrameBuffers) {
+		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
+			{
+				printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
+				Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+				printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+			}
+		}
+		else {
+		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
+			{
+				printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
+				Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+				printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+			}
+		}
+		break;
+		case ADImageContinuous:
+		if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
+		{
+			printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
+			Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+			printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+		}
+		break;
 	}
 
 	printf ("Acquisition started...\n");
@@ -1468,7 +1581,6 @@ int 				iBufferSize,
 					addr=0,
 					status = asynSuccess;
 unsigned int		uiStatus;
-short	int			test;
 
 	pInputFile = fopen (pixel_correction_file, "r");
 
