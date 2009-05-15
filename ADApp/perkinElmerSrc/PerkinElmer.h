@@ -195,7 +195,8 @@ typedef struct {
 					*pOffsetBuffer;
 	DWORD			*pGainBuffer;
 	unsigned int	uiRows,
-					uiColumns;
+					uiColumns,
+					numBufferFrames;
 	int				iAcqMode,
 					iUseOffset,
 					iUseGain,
@@ -242,7 +243,8 @@ DWORD		dwBoardType,
 			dwSystemID,
 			dwSyncMode,
 			dwHwAccess;
-int			iChannelNum,
+int			abortAcq,
+			iChannelNum,
 			*pPixelCorrectionList;
 BOOL		bEnableIRQ,
 			bSelfInit,
@@ -257,6 +259,8 @@ UINT		uiRows,
 			uiChannelType,
 			uiPEResult,
 			uiNumFrameBuffers;
+double      acqTimeReq,
+            acqTimeAct;
 
 AcqData_t 		dataAcqStruct;
 
