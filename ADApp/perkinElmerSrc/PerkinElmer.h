@@ -32,7 +32,7 @@
 #include <epicsMutex.h>
 #include <cantProceed.h>
 
-#include "ADStdDriverParams.h"
+#include "asynNDArrayDriver.h"
 #include "NDArray.h"
 #include "ADDriver.h"
 
@@ -50,7 +50,7 @@ static const char *driverName = "drvPerkinElmer";
 /* If we have any private driver parameters they begin with ADFirstDriverParam and should end
    with ADLastDriverParam, which is used for setting the size of the parameter library table */
 typedef enum {
-	PE_SystemID = ADFirstDriverParam,
+	PE_SystemID = ADLastStdParam,
     PE_Initialize,
     PE_StatusRBV,
     PE_AcquireOffset,
@@ -169,6 +169,8 @@ typedef enum
 {
     PE_STATUS_OK,
     PE_STATUS_INITIALIZING,
+    PE_STATUS_RUNNING_OFFSET,
+    PE_STATUS_RUNNING_GAIN,
     PE_STATUS_ERROR
 } PEStatus_t;
 

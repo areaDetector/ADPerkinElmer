@@ -47,15 +47,29 @@ unsigned int    SizeX, SizeY;
 DWORD ActAcqFrame;
 DWORD ActBuffFrame;
 unsigned int buffOffset;
+DWORD 				HISError,
+					FGError;
 
 	printf ("Acquire callback called...\n");
 
-	Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
+  	uiStatus = 	Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
+	if ( uiStatus != 0 ) {
+	   printf("Error: %d Acquisition_GetAcqData failed in OnEndFrameCallback!\n", uiStatus);
+	   Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+	   printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+	   }
+
 
     /** find offset into secondary frame buffer */
-   	Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
-	pUsrArgs = ((AcqData_t *) dwValue);
-	SizeX = pUsrArgs->uiColumns;
+  	uiStatus =  Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
+	if ( uiStatus != 0 ) {
+	   printf("Error: %d Acquisition_GetActFrame failed in OnEndFrameCallback!\n", uiStatus);
+	   Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+	   printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+	   }
+
+  	pUsrArgs = ((AcqData_t *) dwValue);
+  	SizeX = pUsrArgs->uiColumns;
 	SizeY = pUsrArgs->uiRows;
 	buffOffset = SizeX * SizeY * ((ActBuffFrame - 1)%pUsrArgs->numBufferFrames);
 
@@ -158,10 +172,10 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
     status |= setIntegerParam(addr, ADSizeX, maxSizeX);
     status |= setIntegerParam(addr, ADSizeX, maxSizeX);
     status |= setIntegerParam(addr, ADSizeY, maxSizeY);
-    status |= setIntegerParam(addr, ADImageSizeX, maxSizeX);
-    status |= setIntegerParam(addr, ADImageSizeY, maxSizeY);
-    status |= setIntegerParam(addr, ADImageSize, 0);
-    status |= setIntegerParam(addr, ADDataType, dataType);
+    status |= setIntegerParam(addr, NDArraySizeX, maxSizeX);
+    status |= setIntegerParam(addr, NDArraySizeY, maxSizeY);
+    status |= setIntegerParam(addr, NDArraySize, 0);
+    status |= setIntegerParam(addr, NDDataType, dataType);
     status |= setIntegerParam(addr, ADImageMode, ADImageContinuous);
     status |= setDoubleParam (addr, ADAcquireTime, 0.0665 );
     status |= setDoubleParam (addr, ADAcquirePeriod, .005);
@@ -231,7 +245,8 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
 
 	//If Status is Initializing--ignore user input!
     status = getIntegerParam(addr, PE_StatusRBV, &iDetectorStatus);
-    if (iDetectorStatus == PE_STATUS_INITIALIZING)
+         getIntegerParam(addr, ADStatus, &adstatus);
+   if (iDetectorStatus != PE_STATUS_OK)
     	return ((asynStatus) status);
 
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
@@ -244,7 +259,7 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
         getIntegerParam(addr, ADStatus, &adstatus);
 
         //Start acquisition
-        if (value && (adstatus == ADStatusIdle))
+        if (value && (adstatus == ADStatusIdle) )
         {
             asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s: Acquire!\n", driverName, functionName);
 
@@ -275,9 +290,20 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
         if (!value && (adstatus != ADStatusIdle))
         {
             this->imagesRemaining = 0;
-			Acquisition_Abort(hAcqDesc);
+			setIntegerParam(addr, ADAcquire, 0);
            	setIntegerParam(addr, ADStatus, ADStatusIdle);
-           asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s: Idle!\n", driverName, functionName);
+		    callParamCallbacks(addr, addr);
+//			abortStatus = 0;
+//			while (abortStatus == 0) {
+//				abortStatus = Acquisition_Abort(hAcqDesc);
+//			}
+//            getIntegerParam(addr, ADStatus, &iDetectorStatus);
+// 	        while (iDetectorStatus){
+// 				printf("Status still not set\n");
+// 				getIntegerParam(addr, ADStatus, &iDetectorStatus);
+//			}
+ 			this->abortAcq = 1;
+          asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s: Idle!\n", driverName, functionName);
         }
         break;
     case ADBinX:
@@ -286,7 +312,7 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
     case ADMinY:
     case ADSizeX:
     case ADSizeY:
-    case ADDataType:
+    case NDDataType:
         break;
     case ADImageMode:
         /* The image mode may have changed while we are acquiring,
@@ -305,9 +331,29 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
             break;
         }
         break;
-    case PE_Initialize: initializeDetector (); break;
-    case PE_AcquireOffset: acquireOffsetImage (); break;
-    case PE_AcquireGain: acquireGainImage (); break;
+    case PE_Initialize:
+    	{
+			if ( adstatus == ADStatusIdle ) {
+				initializeDetector ();
+			}
+    		break;
+		}
+    case PE_AcquireOffset:
+    	{
+			if ( adstatus == ADStatusIdle ) {
+//				setIntegerParam(addr, PE_StatusRBV, PE_STATUS_RUNNING_OFFSET);
+//				callParamCallbacks(addr, addr);
+	    		acquireOffsetImage ();
+			}
+    		break;
+		}
+    case PE_AcquireGain:
+    	{
+			if ( adstatus == ADStatusIdle ) {
+				acquireGainImage ();
+			}
+			break;
+		}
     case PE_Trigger:
     	{
 			if ((uiPEResult = Acquisition_SetFrameSync(hAcqDesc))!=HIS_ALL_OK)
@@ -423,7 +469,7 @@ void PerkinElmer::report(FILE *fp, int details)
         int nx, ny, dataType;
         getIntegerParam(addr, ADSizeX, &nx);
         getIntegerParam(addr, ADSizeY, &ny);
-        getIntegerParam(addr, ADDataType, &dataType);
+        getIntegerParam(addr, NDDataType, &dataType);
         fprintf(fp, "  NX, NY:            %d  %d\n", nx, ny);
         fprintf(fp, "  Data type:         %d\n", dataType);
     }
@@ -441,14 +487,12 @@ int adstatus;
 int eventStatus;
 int addr=0;
 double pollTime = 0.01;
-
 	while (true)
 	{
         status = epicsEventWait(this->startAcquisitionEventId);
 
         //If in continuous mode, the new image is requested from the callback of the previous image
         //so the new image will fail because the hardware hasn't "finished" the old image
-		printf("hello1\n");
 		eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
         getIntegerParam(addr, ADStatus, &adstatus);
        if (adstatus == ADStatusAcquire) {
@@ -456,18 +500,24 @@ double pollTime = 0.01;
 			Acquisition_SetReady(hAcqDesc, 1);
         	acquireImage ();
 	    }
-
-		while ( adstatus == ADStatusAcquire ) {
+//		i=0;
+		while ( (adstatus == ADStatusAcquire) && (this->abortAcq != 1) ) {
 			eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
+
  	       	getIntegerParam(addr, ADStatus, &adstatus);
+//			if ( (i%10) == 0 ) {
+//				printf ("Acquiring: adstatus = %d, this->abortAcq = %d\n", adstatus, this->abortAcq );
+//			}
+//			i++;
 		}
 
 		if ( this->abortAcq == 1 ) {
 			printf ("acquireTask: Aborting Acquisition\n");
 			this->abortAcq = 0;
- 	       	getIntegerParam(addr, ADAcquire, &adstatus);
+
+ 	       	getIntegerParam(addr, ADStatus, &adstatus);
  	        while (adstatus){
- 	           getIntegerParam(addr, ADAcquire, &adstatus);
+ 	           getIntegerParam(addr, ADStatus, &adstatus);
 			}
 	 	   Acquisition_Abort(this->hAcqDesc);
 		}
@@ -504,14 +554,14 @@ const char *functionName = "frameCallback";
     elapsedTime = epicsTimeDiffInSeconds(&endTime, &startTime);
 
     /* Get the current parameters */
-    getIntegerParam(addr, ADImageSizeX, &imageSizeX);
-    getIntegerParam(addr, ADImageSizeY, &imageSizeY);
-    getIntegerParam(addr, ADImageSize,  &imageSize);
-    getIntegerParam(addr, ADDataType,   &dataType);
-    getIntegerParam(addr, ADAutoSave,   &autoSave);
-    getIntegerParam(addr, ADImageCounter, &imageCounter);
+    getIntegerParam(addr, NDArraySizeX, &imageSizeX);
+    getIntegerParam(addr, NDArraySizeY, &imageSizeY);
+    getIntegerParam(addr, NDArraySize,  &imageSize);
+    getIntegerParam(addr, NDDataType,   &dataType);
+    getIntegerParam(addr, NDAutoSave,   &autoSave);
+    getIntegerParam(addr, NDArrayCounter, &imageCounter);
     imageCounter++;
-    setIntegerParam(addr, ADImageCounter, imageCounter);
+    setIntegerParam(addr, NDArrayCounter, imageCounter);
 
     /* Put the frame number and time stamp into the buffer */
     pImage->uniqueId = imageCounter;
@@ -565,7 +615,8 @@ int 	addr=0,
 	if (pOffsetBuffer != NULL)
 	{
 	    status |= setIntegerParam(addr, PE_OffsetAvailable, AVAILABLE);
-	    callParamCallbacks();
+		setIntegerParam(addr, PE_StatusRBV, PE_STATUS_OK);
+	    callParamCallbacks(addr, addr);
 	}
 
 
@@ -586,7 +637,8 @@ int 	addr=0,
 	if (pGainBuffer != NULL)
 	{
 	    status |= setIntegerParam(addr, PE_GainAvailable, AVAILABLE);
-	    callParamCallbacks();
+	    setIntegerParam(addr, PE_StatusRBV, PE_STATUS_OK);
+	    callParamCallbacks(addr, addr);
 	}
 
 	bAcquiringGain = false;
@@ -686,7 +738,7 @@ int PerkinElmer::computeImage(void)
     status |= getIntegerParam(addr, ADReverseY,     &reverseY);
     status |= getIntegerParam(addr, ADMaxSizeX,     &maxSizeX);
     status |= getIntegerParam(addr, ADMaxSizeY,     &maxSizeY);
-    status |= getIntegerParam(addr, ADDataType,     (int *)&dataType);
+    status |= getIntegerParam(addr, NDDataType,     (int *)&dataType);
     if (status) asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: error getting parameters\n",
                     driverName, functionName);
@@ -790,9 +842,9 @@ int PerkinElmer::computeImage(void)
     pImage->getInfo(&arrayInfo);
 
     status = asynSuccess;
-    status |= setIntegerParam(addr, ADImageSize,  arrayInfo.totalBytes);
-    status |= setIntegerParam(addr, ADImageSizeX, pImage->dims[0].size);
-    status |= setIntegerParam(addr, ADImageSizeY, pImage->dims[1].size);
+    status |= setIntegerParam(addr, NDArraySize,  arrayInfo.totalBytes);
+    status |= setIntegerParam(addr, NDArraySizeX, pImage->dims[0].size);
+    status |= setIntegerParam(addr, NDArraySizeY, pImage->dims[1].size);
     if (status)
     	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: error setting parameters\n",
@@ -869,7 +921,7 @@ DWORD devAcqType, devSystemID, devSyncMode, devHwAccess;
 
 	//let the user know what's going on...
     status |= setIntegerParam(addr, PE_StatusRBV, PE_STATUS_INITIALIZING);
-    callParamCallbacks();
+    callParamCallbacks(addr, addr);
 
 	//get some information
     status |= getIntegerParam(addr, PE_NumFrameBuffers, (int *) &uiNumFrameBuffers);
@@ -1191,6 +1243,7 @@ int status = asynSuccess;
 	dataAcqStruct.iUseGain = 0;
 	dataAcqStruct.iUsePixelCorrections = 0;
 	dataAcqStruct.pPerkinElmer = this;
+	dataAcqStruct.numBufferFrames = 1;
 	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
 
 	if((uiPEResult=Acquisition_Acquire_OffsetImage(hAcqDesc,pOffsetBuffer,uiRows,uiColumns,iFrames))!=HIS_ALL_OK)
@@ -1206,7 +1259,7 @@ int status = asynSuccess;
 
 void PerkinElmer::acquireGainImage (void)
 {
-const char* 		functionName = "acquireOffsetImage";
+const char* 		functionName = "acquireGainImage";
 HANDLE 				hevEndAcq=NULL;
 int					iFrames,
 					addr=0;
@@ -1244,6 +1297,7 @@ int status = asynSuccess;
 	dataAcqStruct.iUseGain = 0;
 	dataAcqStruct.iUsePixelCorrections = 0;
 	dataAcqStruct.pPerkinElmer = this;
+	dataAcqStruct.numBufferFrames = 1;
 	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
 
 	if((uiPEResult=Acquisition_Acquire_GainImage(hAcqDesc,pOffsetBuffer,pGainBuffer,uiRows,uiColumns,iFrames))!=HIS_ALL_OK)
@@ -1277,8 +1331,8 @@ FILE				*pOutputFile;
 	status |= getStringParam(PE_CorrectionsDirectory, sizeof(cpCorrectionsDirectory), cpCorrectionsDirectory);
 	status |= getIntegerParam(addr, PE_GainRBV, &iGainIndex);
 	status |= getIntegerParam(addr, PE_DwellTimeRBV, &iTimeIndex);
-    status |= getIntegerParam(addr, ADImageSizeX, &iSizeX);
-    status |= getIntegerParam(addr, ADImageSizeY, &iSizeY);
+    status |= getIntegerParam(addr, NDArraySizeX, &iSizeX);
+    status |= getIntegerParam(addr, NDArraySizeY, &iSizeY);
 
 	printf ("Saving corrections to path: %s!\n", cpCorrectionsDirectory);
 
@@ -1423,8 +1477,8 @@ struct stat 		stat_buffer;
 	status |= getStringParam(PE_PixelCorrectionFile, sizeof(cpPixelCorrectionFile), cpPixelCorrectionFile);
 	status |= getIntegerParam(addr, PE_GainRBV, &iGainIndex);
 	status |= getIntegerParam(addr, PE_DwellTimeRBV, &iTimeIndex);
-    status |= getIntegerParam(addr, ADImageSizeX, &iSizeX);
-    status |= getIntegerParam(addr, ADImageSizeY, &iSizeY);
+    status |= getIntegerParam(addr, NDArraySizeX, &iSizeX);
+    status |= getIntegerParam(addr, NDArraySizeY, &iSizeY);
 
 	switch (iTimeIndex)
 	{
