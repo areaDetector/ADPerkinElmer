@@ -363,6 +363,10 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		}
 	case PE_SaveCorrectionFiles: saveCorrectionFiles (); break;
 	case PE_LoadCorrectionFiles: loadCorrectionFiles (); break;
+    default:
+        /* If this parameter belongs to a base class call its method */
+        if (function < ADLastStdParam) status = ADDriver::writeInt32(pasynUser, value);
+        break;
     }
 
     /* Do callbacks so higher layers see any changes */
@@ -403,8 +407,11 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
         retstat |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
 
 		break;
-
     case ADGain:
+        break;
+    default:
+        /* If this parameter belongs to a base class call its method */
+        if (function < ADLastStdParam) status = ADDriver::writeFloat64(pasynUser, value);
         break;
     }
 
@@ -566,6 +573,9 @@ const char *functionName = "frameCallback";
     /* Put the frame number and time stamp into the buffer */
     pImage->uniqueId = imageCounter;
     pImage->timeStamp = startTime.secPastEpoch + startTime.nsec / 1.e9;
+
+    /* Get any attributes that have been defined for this driver */        
+    this->getAttributes(pImage);
 
     /* Call the NDArray callback */
     /* Must release the lock here, or we can get into a deadlock, because we can
