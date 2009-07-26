@@ -7,7 +7,7 @@ include $(TOP)/configure/CONFIG
 #USR_CFLAGS += /DHDF5
 #USR_CXXFLAGS += /DHDF5
 
-LIBRARY_IOC = PerkinElmer
+LIBRARY_IOC_WIN32 = PerkinElmer
 LIB_SRCS += PerkinElmer.cpp
 LIB_SRCS += drvPerkinElmerEpics.c
 LIB_LIBS += ADBase NDPlugin netCDF
@@ -27,7 +27,7 @@ LIB_LIBS += XISL
 #LIB_INSTALLS_WIN32    += ../XISL.lib
 
 #==================================
-PROD_IOC += PerkinElmerApp
+PROD_IOC_WIN32 += PerkinElmerApp
 # <name>.dbd will be created from <name>Include.dbd
 DBD += PerkinElmerApp.dbd
 DBD += PerkinElmerSupport.dbd
@@ -53,7 +53,10 @@ PerkinElmerApp_LIBS += $(EPICS_BASE_IOC_LIBS)
 XISL_DIR = C:/XIS/SDK
 PerkinElmerApp_LIBS += XISL
 
-#PerkinElmerCCDApp_SYS_LIBS_cygwin32 += rpc
+PerkinElmerApp_SYS_LIBS_cygwin32 += rpc
+PerkinElmerApp_LIBS_WIN32        += libtiff jpeg
+PerkinElmerApp_LIBS_cygwin32     += libtiff jpeg
+PerkinElmerApp_SYS_LIBS_Linux    += tiff jpeg z
 
 #=============================
 
