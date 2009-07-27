@@ -191,6 +191,7 @@ typedef enum
 class PerkinElmer;
 
 //______________________________________________________________________________________________
+/** Structure defining the data acquisition parameters for the Perkin Elmer detector */
 
 typedef struct {
 	unsigned short 	*pDataBuffer,
@@ -208,6 +209,7 @@ typedef struct {
 } AcqData_t;
 
 //______________________________________________________________________________________________
+/** Driver for the Perkin Elmer flat panel amorphous silicon detectors */
 
 class PerkinElmer : public ADDriver
 {
