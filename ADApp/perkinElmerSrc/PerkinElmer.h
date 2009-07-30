@@ -79,6 +79,7 @@ typedef enum {
     PE_PixelCorrectionFile,
     PE_PixelCorrectionFileRBV,
     PE_CorrectionsDirectory,
+    PE_FastCollectMode,
     ADLastDriverParam
 } PerkinElmerParam_t;
 
@@ -114,6 +115,7 @@ static asynParamString_t PerkinElmerParamString[] = {
     {PE_PixelCorrectionFile,	   	"PE_PIXEL_CORRECTION_FILE"},
     {PE_PixelCorrectionFileRBV,		"PE_PIXEL_CORRECTION_FILE_RBV"},
     {PE_CorrectionsDirectory,		"PE_CORRECTIONS_DIRECTORY"},
+	{PE_FastCollectMode,            "PE_FAST_COLLECT_MODE"},
 
 };
 
@@ -205,6 +207,7 @@ typedef struct {
 					iUseGain,
 					iUsePixelCorrections,
 					*pPixelCorrectionList;
+	short			iFastCollectMode;
 	PerkinElmer		*pPerkinElmer;
 } AcqData_t;
 
@@ -230,7 +233,7 @@ NDArray 			*pRaw;
 
     void acquireTask ();
 
-	void frameCallback ();
+	void frameCallback (unsigned int buffFrame);
 	void offsetCallback ();
 	void gainCallback ();
 
@@ -268,10 +271,10 @@ double      acqTimeReq,
 
 AcqData_t 		dataAcqStruct;
 
-	template <typename epicsType> void computeArray(int maxSizeX, int maxSizeY);
+	template <typename epicsType> void computeArray(int maxSizeX, int maxSizeY, unsigned int buffFrame);
 
 	int allocateBuffer(void);
-	int computeImage(void);
+	int computeImage(unsigned int buffFrame);
 
 	void enumSensors (void);
 	BOOL initializeDetector (void);

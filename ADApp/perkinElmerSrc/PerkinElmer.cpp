@@ -46,11 +46,13 @@ unsigned int	uiStatus;
 unsigned int    SizeX, SizeY;
 DWORD ActAcqFrame;
 DWORD ActBuffFrame;
+unsigned int currBuff;
 unsigned int buffOffset;
+int imageCounter;
 DWORD 				HISError,
 					FGError;
 
-	printf ("Acquire callback called...\n");
+	printf ("End Frame callback called...\n");
 
   	uiStatus = 	Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
 	if ( uiStatus != 0 ) {
@@ -58,23 +60,29 @@ DWORD 				HISError,
 	   Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
 	   printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
 	   }
-
-
-    /** find offset into secondary frame buffer */
-  	uiStatus =  Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
-	if ( uiStatus != 0 ) {
-	   printf("Error: %d Acquisition_GetActFrame failed in OnEndFrameCallback!\n", uiStatus);
-	   Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-	   printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
-	   }
-
   	pUsrArgs = ((AcqData_t *) dwValue);
-  	SizeX = pUsrArgs->uiColumns;
-	SizeY = pUsrArgs->uiRows;
-	buffOffset = SizeX * SizeY * ((ActBuffFrame - 1)%pUsrArgs->numBufferFrames);
 
-	if (pUsrArgs->iAcqMode == PE_ACQUIRE_ACQUISITION)
+	pUsrArgs->pPerkinElmer->getIntegerParam(0, ADNumImagesCounter, &imageCounter);
+	imageCounter++;
+	pUsrArgs->pPerkinElmer->setIntegerParam(0, ADNumImagesCounter, imageCounter);
+	pUsrArgs->pPerkinElmer->callParamCallbacks();
+
+	if ((pUsrArgs->iAcqMode == PE_ACQUIRE_ACQUISITION) && !(pUsrArgs->iFastCollectMode) )
 	{
+        /** find offset into secondary frame buffer */
+      	uiStatus =  Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
+	    if ( uiStatus != 0 ) {
+	       printf("Error: %d Acquisition_GetActFrame failed in OnEndFrameCallback!\n", uiStatus);
+	       Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+	       printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+	       }
+		printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
+
+  	    SizeX = pUsrArgs->uiColumns;
+	    SizeY = pUsrArgs->uiRows;
+		currBuff = (ActBuffFrame - 1)%pUsrArgs->numBufferFrames;
+	    buffOffset = SizeX * SizeY * currBuff;
+
 		/** Correct for detector offset and gain as necessary */
 		if ((pUsrArgs->iUseOffset) && (pUsrArgs->pOffsetBuffer != NULL))
 		{
@@ -89,10 +97,10 @@ DWORD 				HISError,
 			uiStatus = Acquisition_DoPixelCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pPixelCorrectionList);
 
 		/** Call the routine that actually grabs the data */
-		((AcqData_t *) dwValue)->pPerkinElmer->frameCallback ();
+		pUsrArgs->pPerkinElmer->frameCallback (currBuff);
 	}
 
-	printf ("Acquire callback done!\n");
+	printf ("End Frame callback done!\n");
 
 
 }
@@ -104,11 +112,44 @@ void CALLBACK OnEndAcqCallback(HACQDESC hAcqDesc)
 {
 DWORD		dwValue;
 AcqData_t 	*pUsrArgs;
+unsigned int uiStatus;
+unsigned int    SizeX, SizeY;
+DWORD ActAcqFrame;
+DWORD ActBuffFrame;
+unsigned int currBuff;
+unsigned int buffOffset;
+DWORD 				HISError,
+					FGError;
 
 	printf ("End Acquire callback called...\n");
 
-	Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
+  	uiStatus = 	Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
+	if ( uiStatus != 0 ) {
+	   printf("Error: %d Acquisition_GetAcqData failed in OnEndFrameCallback!\n", uiStatus);
+	   Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+	   printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+	   }
 	pUsrArgs = ((AcqData_t *) dwValue);
+
+	/** For normal acquisition mode, send out Arrays all at once once acquisition is over */
+	if ((pUsrArgs->iAcqMode == PE_ACQUIRE_ACQUISITION) && (pUsrArgs->iFastCollectMode) )
+	{
+        /** find offset into secondary frame buffer */
+      	uiStatus =  Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
+	    if ( uiStatus != 0 ) {
+	       printf("Error: %d Acquisition_GetActFrame failed in OnEndFrameCallback!\n", uiStatus);
+	       Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+	       printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+	       }
+
+  	    SizeX = pUsrArgs->uiColumns;
+	    SizeY = pUsrArgs->uiRows;
+		currBuff = (ActBuffFrame - 1)%pUsrArgs->numBufferFrames;
+	    buffOffset = SizeX * SizeY * ((ActBuffFrame - 1)%pUsrArgs->numBufferFrames);
+
+
+
+	}
 
 	/* raise a flag to the user if offset data is available */
 	if (pUsrArgs->iAcqMode == PE_ACQUIRE_OFFSET)
@@ -131,6 +172,7 @@ AcqData_t 	*pUsrArgs;
 /** Constructor for this driver */
 PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDataType_t dataType, int maxBuffers,
                           size_t maxMemory, int priority, int stackSize)
+
     : ADDriver(portName, 1, ADLastDriverParam, maxBuffers, maxMemory, 0, 0, ASYN_CANBLOCK, 1, priority, stackSize), imagesRemaining(0), pRaw(NULL)
 {
     int status = asynSuccess;
@@ -209,7 +251,7 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
     status |= setStringParam (addr, PE_PixelCorrectionFileRBV, "none");
     status |= setIntegerParam(addr, PE_PixelCorrectionAvailable, NOT_AVAILABLE);
     status |= setStringParam (addr, PE_CorrectionsDirectory, "none");
-
+	status |= setIntegerParam (addr, PE_FastCollectMode, 0);
     if (status) {
         printf("%s: unable to set camera parameters\n", functionName);
         return;
@@ -536,7 +578,7 @@ double pollTime = 0.01;
 //_____________________________________________________________________________________________
 
 /** called from OnEndFrameCallback to process data from the detector into the pArray */
-void PerkinElmer::frameCallback()
+void PerkinElmer::frameCallback(unsigned int buffFrame)
 {
 /* This thread computes new image data and does the callbacks to send it to higher layers */
 int status = asynSuccess;
@@ -553,7 +595,7 @@ const char *functionName = "frameCallback";
     this->lock();
 
     /* Update the image */
-    status = computeImage();
+    status = computeImage(buffFrame);
 
     pImage = this->pArrays[addr];
 
@@ -682,25 +724,30 @@ PerkinElmer::~PerkinElmer()
 //_____________________________________________________________________________________________
 //_____________________________________________________________________________________________
 /** Move data from secondary frame buffer to the driver's data space */
-template <typename epicsType> void PerkinElmer::computeArray(int maxSizeX, int maxSizeY)
+template <typename epicsType> void PerkinElmer::computeArray(int maxSizeX, int maxSizeY, unsigned int buffFrame )
 {
-DWORD ActAcqFrame;
-DWORD ActBuffFrame;
-int frameBufferSize;
+//DWORD ActAcqFrame;
+//DWORD ActBuffFrame;
+int bufferOffset;
+int yOffset;
+//int frameBufferSize;
 int addr = 0;
 
-/* Find which slot in the secondary buffer is active. */
-Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
-getIntegerParam(addr, PE_NumFrameBuffersRBV, &frameBufferSize);
+	/* Find which slot in the secondary buffer is active. */
+//	Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
+//	getIntegerParam(addr, PE_NumFrameBuffersRBV, &frameBufferSize);
+	bufferOffset = (maxSizeX*maxSizeY)*buffFrame;
+//	printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
+//	printf( "computeArray: buffFrame %d\n", buffFrame);
+	epicsType *pData = (epicsType *)this->pRaw->pData;
 
-printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
 
-epicsType *pData = (epicsType *)this->pRaw->pData;
-
-
-	for (int loopy=0; loopy<maxSizeY; loopy++)
-		for (int loopx=0; loopx<maxSizeX; loopx++)
-			(*pData++) = (epicsType)pAcqBuffer[(loopy*maxSizeX)+loopx + (maxSizeX*maxSizeY)*((ActBuffFrame-1)%frameBufferSize)];
+	for (int loopy=0; loopy<maxSizeY; loopy++) {
+		yOffset = (loopy*maxSizeX);
+		for (int loopx=0; loopx<maxSizeX; loopx++){
+			(*pData++) = (epicsType)pAcqBuffer[loopx + yOffset + bufferOffset];
+		}
+	}
 }
 
 //_____________________________________________________________________________________________
@@ -724,7 +771,7 @@ int PerkinElmer::allocateBuffer()
 
 //_____________________________________________________________________________________________
 
-int PerkinElmer::computeImage(void)
+int PerkinElmer::computeImage(unsigned int buffFrame)
 {
     int status = asynSuccess;
     NDDataType_t dataType;
@@ -798,28 +845,28 @@ int PerkinElmer::computeImage(void)
     }
     switch (dataType) {
         case NDInt8:
-            computeArray<epicsInt8>(maxSizeX, maxSizeY);
+            computeArray<epicsInt8>(maxSizeX, maxSizeY, buffFrame);
             break;
         case NDUInt8:
-            computeArray<epicsUInt8>(maxSizeX, maxSizeY);
+            computeArray<epicsUInt8>(maxSizeX, maxSizeY, buffFrame);
             break;
         case NDInt16:
-            computeArray<epicsInt16>(maxSizeX, maxSizeY);
+            computeArray<epicsInt16>(maxSizeX, maxSizeY, buffFrame);
             break;
         case NDUInt16:
-            computeArray<epicsUInt16>(maxSizeX, maxSizeY);
+            computeArray<epicsUInt16>(maxSizeX, maxSizeY, buffFrame);
             break;
         case NDInt32:
-            computeArray<epicsInt32>(maxSizeX, maxSizeY);
+            computeArray<epicsInt32>(maxSizeX, maxSizeY, buffFrame);
             break;
         case NDUInt32:
-            computeArray<epicsUInt32>(maxSizeX, maxSizeY);
+            computeArray<epicsUInt32>(maxSizeX, maxSizeY, buffFrame);
             break;
         case NDFloat32:
-            computeArray<epicsFloat32>(maxSizeX, maxSizeY);
+            computeArray<epicsFloat32>(maxSizeX, maxSizeY, buffFrame);
             break;
         case NDFloat64:
-            computeArray<epicsFloat64>(maxSizeX, maxSizeY);
+            computeArray<epicsFloat64>(maxSizeX, maxSizeY, buffFrame);
             break;
     }
 
@@ -1113,6 +1160,7 @@ int 				iMode,
 					iUseOffset,
 					iUseGain,
 					iUsePixelCorrection,
+					iFastCollectMode,
 					addr=0,
 					numImages = 0;
 int 				status = asynSuccess;
@@ -1124,6 +1172,8 @@ DWORD 				HISError,
    	status |= getIntegerParam(addr, PE_UseOffset, &iUseOffset);
    	status |= getIntegerParam(addr, PE_UseGain, &iUseGain);
    	status |= getIntegerParam(addr, PE_UsePixelCorrection, &iUsePixelCorrection);
+   	status |= getIntegerParam(addr, PE_FastCollectMode, &iFastCollectMode);
+
    	if (status)
    		asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
    	                "%s:%s: error getting parameters\n",
@@ -1137,7 +1187,12 @@ DWORD 				HISError,
     	case ADImageSingle:	iFrames = 1; break;
         case ADImageMultiple: {
 		    status = getIntegerParam(addr, PE_NumFrameBuffers, (int *) &uiNumFrameBuffers);
-			iFrames = uiNumFrameBuffers;
+ 		   	if ( numImages > uiNumFrameBuffers) {
+			    iFrames = uiNumFrameBuffers;
+			}
+			else {
+			    iFrames = numImages;
+			}
 		}
         case ADImageContinuous: {
 		    status = getIntegerParam(addr, PE_NumFrameBuffers, (int *) &uiNumFrameBuffers);
@@ -1161,12 +1216,14 @@ DWORD 				HISError,
 	dataAcqStruct.iUsePixelCorrections = iUsePixelCorrection;
 	dataAcqStruct.pPerkinElmer = this;
 	dataAcqStruct.numBufferFrames = iFrames;
+	dataAcqStruct.iFastCollectMode = iFastCollectMode;
+	printf( "FastCollectMode %d\n", iFastCollectMode);
 
 	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
 	if ((uiPEResult=Acquisition_DefineDestBuffers(hAcqDesc, pAcqBuffer,	iFrames, uiRows, uiColumns))!=HIS_ALL_OK)
 		printf("Error : %d  Acquisition_DefineDestBuffers failed!\n", uiPEResult);
 
-
+	setIntegerParam(addr, ADNumImagesCounter, 0);
 	Acquisition_ResetFrameCnt(hAcqDesc);
 	Acquisition_SetReady(hAcqDesc, 1);
 	switch (iMode) {
@@ -1189,7 +1246,7 @@ DWORD 				HISError,
 			}
 		}
 		else {
-		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
+		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
 			{
 				printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
 				Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
@@ -1254,6 +1311,8 @@ int status = asynSuccess;
 	dataAcqStruct.iUsePixelCorrections = 0;
 	dataAcqStruct.pPerkinElmer = this;
 	dataAcqStruct.numBufferFrames = 1;
+	dataAcqStruct.iFastCollectMode = 0;
+
 	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
 
 	if((uiPEResult=Acquisition_Acquire_OffsetImage(hAcqDesc,pOffsetBuffer,uiRows,uiColumns,iFrames))!=HIS_ALL_OK)
@@ -1308,6 +1367,8 @@ int status = asynSuccess;
 	dataAcqStruct.iUsePixelCorrections = 0;
 	dataAcqStruct.pPerkinElmer = this;
 	dataAcqStruct.numBufferFrames = 1;
+	dataAcqStruct.iFastCollectMode = 0;
+
 	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
 
 	if((uiPEResult=Acquisition_Acquire_GainImage(hAcqDesc,pOffsetBuffer,pGainBuffer,uiRows,uiColumns,iFrames))!=HIS_ALL_OK)
