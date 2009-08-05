@@ -1,0 +1,146 @@
+# save/restore V5.5	Automatically generated - DO NOT MODIFY - 090804-224348
+JPHPE1:cam1:PEBadPixelFile 
+JPHPE1:cam1:PECorrectionsDir 
+JPHPE1:cam1:DataType 3
+JPHPE1:cam1:ColorMode 0
+JPHPE1:cam1:BinX 1
+JPHPE1:cam1:BinY 1
+JPHPE1:cam1:MinX 0
+JPHPE1:cam1:MinY 0
+JPHPE1:cam1:SizeX 1024
+JPHPE1:cam1:SizeY 1024
+JPHPE1:cam1:ReverseX 0
+JPHPE1:cam1:ReverseY 0
+JPHPE1:cam1:AcquireTime 0.25
+JPHPE1:cam1:AcquirePeriod 0.005
+JPHPE1:cam1:Gain 1
+JPHPE1:cam1:ImageMode 0
+JPHPE1:cam1:TriggerMode 0
+JPHPE1:cam1:NumExposures 1
+JPHPE1:cam1:NumImages 10
+JPHPE1:cam1:FrameType 0
+JPHPE1:cam1:ArrayCallbacks 1
+JPHPE1:cam1:ShutterMode 0
+JPHPE1:cam1:ShutterOpenDelay 0
+JPHPE1:cam1:ShutterCloseDelay 0
+JPHPE1:cam1:ShutterOpenEPICS.OUT 
+JPHPE1:cam1:ShutterCloseEPICS.OUT 
+JPHPE1:cam1:ShutterOpenEPICS.OCAL 1
+JPHPE1:cam1:ShutterCloseEPICS.OCAL 0
+JPHPE1:cam1:ShutterStatusEPICS_RBV.INP test CP MS
+JPHPE1:cam1:ShutterStatusEPICS_RBV.ZRVL 0
+JPHPE1:cam1:ShutterStatusEPICS_RBV.ONVL 1
+JPHPE1:cam1:PVAttributesFile @array@ { "67" "58" "47" "116" "109" "112" "70" "105" "108" "101" "47" "80" "101" "114" "107" "105" "110" "69" "108" "109" "101" "114" "80" "97" "114" "97" "109" "115" "46" "120" "109" "108" "0" }
+JPHPE1:image1:NDArrayPort PEDET1
+JPHPE1:image1:NDArrayAddress 0
+JPHPE1:image1:EnableCallbacks 1
+JPHPE1:image1:MinCallbackTime 0
+JPHPE1:image1:BlockingCallbacks 0
+JPHPE1:image1:PVAttributesFile 
+JPHPE1:TIFF1:NDArrayPort PEDET1
+JPHPE1:TIFF1:NDArrayAddress 0
+JPHPE1:TIFF1:EnableCallbacks 1
+JPHPE1:TIFF1:MinCallbackTime 0
+JPHPE1:TIFF1:BlockingCallbacks 0
+JPHPE1:TIFF1:PVAttributesFile 
+JPHPE1:TIFF1:FilePath @array@ { "67" "58" "92" "116" "109" "112" "70" "105" "108" "101" "92" "0" }
+JPHPE1:TIFF1:FileName @array@ { "116" "101" "115" "116" "0" }
+JPHPE1:TIFF1:FileNumber 4
+JPHPE1:TIFF1:AutoIncrement 1
+JPHPE1:TIFF1:FileTemplate @array@ { "37" "115" "37" "115" "95" "37" "46" "52" "100" "46" "116" "105" "102" "102" "0" }
+JPHPE1:TIFF1:AutoSave 1
+JPHPE1:TIFF1:FileFormat 0
+JPHPE1:TIFF1:FileWriteMode 0
+JPHPE1:TIFF1:NumCapture 0
+JPHPE1:ROI1:NDArrayPort PEDET1
+JPHPE1:ROI1:NDArrayAddress 0
+JPHPE1:ROI1:EnableCallbacks 1
+JPHPE1:ROI1:MinCallbackTime 0
+JPHPE1:ROI1:BlockingCallbacks 0
+JPHPE1:ROI1:PVAttributesFile 
+JPHPE1:ROI1:Highlight 0
+JPHPE1:ROI1:0:Name 
+JPHPE1:ROI1:0:Use 1
+JPHPE1:ROI1:0:BinX 1
+JPHPE1:ROI1:0:BinY 1
+JPHPE1:ROI1:0:BinZ 1
+JPHPE1:ROI1:0:MinX 500
+JPHPE1:ROI1:0:MinY 500
+JPHPE1:ROI1:0:MinZ 0
+JPHPE1:ROI1:0:SizeX 24
+JPHPE1:ROI1:0:SizeY 24
+JPHPE1:ROI1:0:SizeZ 0
+JPHPE1:ROI1:0:ReverseX 0
+JPHPE1:ROI1:0:ReverseY 0
+JPHPE1:ROI1:0:ReverseZ 0
+JPHPE1:ROI1:0:BgdWidth 0
+JPHPE1:ROI1:0:DataType 3
+JPHPE1:ROI1:0:ComputeStatistics 1
+JPHPE1:ROI1:0:ComputeHistogram 1
+JPHPE1:ROI1:0:HistSize 0
+JPHPE1:ROI1:0:HistMin 0
+JPHPE1:ROI1:0:HistMax 0
+JPHPE1:ROI1:1:Name 
+JPHPE1:ROI1:1:Use 0
+JPHPE1:ROI1:1:BinX 1
+JPHPE1:ROI1:1:BinY 1
+JPHPE1:ROI1:1:BinZ 1
+JPHPE1:ROI1:1:MinX 0
+JPHPE1:ROI1:1:MinY 0
+JPHPE1:ROI1:1:MinZ 0
+JPHPE1:ROI1:1:SizeX 0
+JPHPE1:ROI1:1:SizeY 0
+JPHPE1:ROI1:1:SizeZ 0
+JPHPE1:ROI1:1:ReverseX 0
+JPHPE1:ROI1:1:ReverseY 0
+JPHPE1:ROI1:1:ReverseZ 0
+JPHPE1:ROI1:1:BgdWidth 0
+JPHPE1:ROI1:1:DataType 0
+JPHPE1:ROI1:1:ComputeStatistics 0
+JPHPE1:ROI1:1:ComputeHistogram 0
+JPHPE1:ROI1:1:HistSize 0
+JPHPE1:ROI1:1:HistMin 0
+JPHPE1:ROI1:1:HistMax 0
+JPHPE1:ROI1:2:Name 
+JPHPE1:ROI1:2:Use 0
+JPHPE1:ROI1:2:BinX 1
+JPHPE1:ROI1:2:BinY 1
+JPHPE1:ROI1:2:BinZ 1
+JPHPE1:ROI1:2:MinX 0
+JPHPE1:ROI1:2:MinY 0
+JPHPE1:ROI1:2:MinZ 0
+JPHPE1:ROI1:2:SizeX 0
+JPHPE1:ROI1:2:SizeY 0
+JPHPE1:ROI1:2:SizeZ 0
+JPHPE1:ROI1:2:ReverseX 0
+JPHPE1:ROI1:2:ReverseY 0
+JPHPE1:ROI1:2:ReverseZ 0
+JPHPE1:ROI1:2:BgdWidth 0
+JPHPE1:ROI1:2:DataType 0
+JPHPE1:ROI1:2:ComputeStatistics 0
+JPHPE1:ROI1:2:ComputeHistogram 0
+JPHPE1:ROI1:2:HistSize 0
+JPHPE1:ROI1:2:HistMin 0
+JPHPE1:ROI1:2:HistMax 0
+JPHPE1:ROI1:3:Name 
+JPHPE1:ROI1:3:Use 0
+JPHPE1:ROI1:3:BinX 1
+JPHPE1:ROI1:3:BinY 1
+JPHPE1:ROI1:3:BinZ 1
+JPHPE1:ROI1:3:MinX 0
+JPHPE1:ROI1:3:MinY 0
+JPHPE1:ROI1:3:MinZ 0
+JPHPE1:ROI1:3:SizeX 0
+JPHPE1:ROI1:3:SizeY 0
+JPHPE1:ROI1:3:SizeZ 0
+JPHPE1:ROI1:3:ReverseX 0
+JPHPE1:ROI1:3:ReverseY 0
+JPHPE1:ROI1:3:ReverseZ 0
+JPHPE1:ROI1:3:BgdWidth 0
+JPHPE1:ROI1:3:DataType 0
+JPHPE1:ROI1:3:ComputeStatistics 0
+JPHPE1:ROI1:3:ComputeHistogram 0
+JPHPE1:ROI1:3:HistSize 0
+JPHPE1:ROI1:3:HistMin 0
+JPHPE1:ROI1:3:HistMax 0
+<END>
