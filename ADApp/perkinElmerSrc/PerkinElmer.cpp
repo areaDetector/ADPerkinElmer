@@ -617,7 +617,7 @@ const char *functionName = "frameCallback";
     pImage->timeStamp = startTime.secPastEpoch + startTime.nsec / 1.e9;
 
     /* Get any attributes that have been defined for this driver */        
-    this->getAttributes(pImage);
+    this->getAttributes(pImage->pAttributes);
 
     /* Call the NDArray callback */
     /* Must release the lock here, or we can get into a deadlock, because we can
