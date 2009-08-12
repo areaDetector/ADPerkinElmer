@@ -1,21 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Attributes>
-	<Attribute  name="CameraModel" type="PARAM" source="MODEL" datatype="STRING"   />
-	<Attribute  name="CameraManufacturer" type="PARAM" source="MANUFACTURER" datatype="STRING"   />
-	<Attribute  name="PE_NumOffsetFrames" type="PARAM" source="PE_NUM_OFFSET_FRAMES" datatype="INT"  />
-	<Attribute  name="PE_NumGainFrames" type="PARAM" source="PE_NUM_GAIN_FRAMES" datatype="INT"  />
-	<Attribute  name="PE_UseOffset" type="PARAM" source="PE_USE_OFFSET" datatype="INT"  />
-	<Attribute  name="PE_UseGain" type="PARAM" source="PE_USE_GAIN" datatype="INT"  />
-	<Attribute  name="PE_OffsetAvailable" type="PARAM" source="PE_OFFSET_AVAILABLE" datatype="INT"  />
-	<Attribute  name="PE_GainAvailable" type="PARAM" source="PE_GAIN_AVAILABLE" datatype="INT"  />
-	<Attribute  name="AcqTime" type="PARAM" source="ACQ_TIME" datatype="FLOAT"  />
-	<Attribute  name="TriggerMode" type="PARAM" source="TRIGGER_MODE" datatype="INT"  />
-	<Attribute  name="MaxSizeX" type="PARAM" source="MAX_SIZE_X" datatype="INT"  />
-	<Attribute  name="MaxSizeY" type="PARAM" source="MAX_SIZE_Y" datatype="INT"  />
-	<Attribute  name="MinX" type="PARAM" source="MIN_X" datatype="INT"  />
-	<Attribute  name="MinY" type="PARAM" source="MIN_Y" datatype="INT"  />
-	<Attribute  name="SizeX" type="PARAM" source="SIZE_X" datatype="INT"  />
-	<Attribute  name="SizeY" type="PARAM" source="SIZE_Y" datatype="INT"  />
-
-    
+    <Attribute  name="CameraModel"        type="PARAM" source="MODEL"                datatype="STRING"   />
+    <Attribute  name="CameraManufacturer" type="PARAM" source="MANUFACTURER"         datatype="STRING"   />
+    <Attribute  name="PE_NumOffsetFrames" type="PARAM" source="PE_NUM_OFFSET_FRAMES" datatype="INT"  />
+    <Attribute  name="PE_NumGainFrames"   type="PARAM" source="PE_NUM_GAIN_FRAMES"   datatype="INT"  />
+    <Attribute  name="PE_UseOffset"       type="PARAM" source="PE_USE_OFFSET"        datatype="INT"  />
+    <Attribute  name="PE_UseGain"         type="PARAM" source="PE_USE_GAIN"          datatype="INT"  />
+    <Attribute  name="PE_OffsetAvailable" type="PARAM" source="PE_OFFSET_AVAILABLE"  datatype="INT"  />
+    <Attribute  name="PE_GainAvailable"   type="PARAM" source="PE_GAIN_AVAILABLE"    datatype="INT"  />
+    <Attribute  name="AcqTime"            type="PARAM" source="ACQ_TIME"             datatype="FLOAT"  />
+    <Attribute  name="TriggerMode"        type="PARAM" source="TRIGGER_MODE"         datatype="INT"  />
+    <Attribute  name="MaxSizeX"           type="PARAM" source="MAX_SIZE_X"           datatype="INT"  />
+    <Attribute  name="MaxSizeY"           type="PARAM" source="MAX_SIZE_Y"           datatype="INT"  />
+    <Attribute  name="MinX"               type="PARAM" source="MIN_X"                datatype="INT"  />
+    <Attribute  name="MinY"               type="PARAM" source="MIN_Y"                datatype="INT"  />
+    <Attribute  name="SizeX"              type="PARAM" source="SIZE_X"               datatype="INT"  />
+    <Attribute  name="SizeY"              type="PARAM" source="SIZE_Y"               datatype="INT"  />
 </Attributes>
