@@ -19,7 +19,7 @@ PerkinElmerApp_registerRecordDeviceDriver(pdbbase)
 #
 PerkinElmerConfig("PEDET1", 1024, 1024, 3, 100, 200000000, 50, 10000)
 dbLoadRecords("$(AREA_DETECTOR)/ADApp/Db/ADBase.template",     "P=JPHPE1:,R=cam1:,PORT=PEDET1,ADDR=0,TIMEOUT=1")
-dbLoadRecords("$(AREA_DETECTOR)/ADApp/Db/PerkinElmer_settings.template","P=JPHPE1:,R=cam1:,PORT=PEDET1,ADDR=0,TIMEOUT=1")
+dbLoadRecords("$(AREA_DETECTOR)/ADApp/Db/PerkinElmer.template","P=JPHPE1:,R=cam1:,PORT=PEDET1,ADDR=0,TIMEOUT=1")
 #
 #
 #
