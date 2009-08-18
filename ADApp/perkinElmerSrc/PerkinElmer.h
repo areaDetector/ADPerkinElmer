@@ -268,6 +268,8 @@ UINT		uiRows,
 			uiNumFrameBuffers;
 double      acqTimeReq,
             acqTimeAct;
+int			trigModeReq,
+			trigModeAct;
 
 AcqData_t 		dataAcqStruct;
 

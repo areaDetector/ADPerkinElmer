@@ -222,6 +222,7 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
     status |= setDoubleParam (addr, ADAcquireTime, 0.0665 );
     status |= setDoubleParam (addr, ADAcquirePeriod, .005);
     status |= setIntegerParam(addr, ADNumImages, 100);
+    status |= setIntegerParam(addr, ADTriggerMode, 0);
 
     //Detector parameter defaults
     status |= setIntegerParam(addr, PE_SystemID, 0);
@@ -259,6 +260,8 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
 	/* initialize internal variables uses to hold time delayed information.*/
     status |= getDoubleParam(addr, ADAcquireTime, &(this->acqTimeReq) );
     this->acqTimeAct = this->acqTimeReq;
+    status |= getIntegerParam(addr, ADTriggerMode, &(this->trigModeReq) );
+    this->trigModeAct = this->trigModeReq;
     initializeDetector ();
 
     /* Create the thread that updates the images */
@@ -284,6 +287,7 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
     int addr=0;
     int status = asynSuccess;
     int	iDetectorStatus;
+	int retstat;
 
 	//If Status is Initializing--ignore user input!
     status = getIntegerParam(addr, PE_StatusRBV, &iDetectorStatus);
@@ -403,6 +407,13 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
 
 			break;
 		}
+
+	case ADTriggerMode:
+        retstat |= getIntegerParam(addr, ADTriggerMode, &(this->trigModeReq) );
+		printf ("Setting Requested Trigger Mode: %d\n", this->trigModeReq);
+        retstat |= setIntegerParam(addr, ADTriggerMode, this->trigModeAct );
+		break;
+
 	case PE_SaveCorrectionFiles: saveCorrectionFiles (); break;
 	case PE_LoadCorrectionFiles: loadCorrectionFiles (); break;
     default:
@@ -985,8 +996,8 @@ DWORD devAcqType, devSystemID, devSyncMode, devHwAccess;
     status |= getIntegerParam(addr, PE_Gain, &iGain);
     status |= getIntegerParam(addr, PE_DwellTime, &iTimeIndex);
     status |= getIntegerParam(addr, PE_SyncTime, (int *) &dwSyncTime);
-    status |= getIntegerParam(addr, PE_SyncMode, &iSyncMode);
-
+    //status |= getIntegerParam(addr, ADTriggerMode, &iSyncMode);
+	iSyncMode = this->trigModeReq;
     if (status)
     	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: error getting parameters\n",
@@ -1143,7 +1154,7 @@ DWORD devAcqType, devSystemID, devSyncMode, devHwAccess;
 	status |= setIntegerParam(addr, PE_GainRBV, iGain);
 	status |= setIntegerParam(addr, PE_DwellTimeRBV, iTimeIndex);
 	status |= setIntegerParam(addr, PE_NumFrameBuffersRBV, uiNumFrameBuffers);
-    status |= setIntegerParam(addr, PE_SyncModeRBV, iSyncMode);
+    status |= setIntegerParam(addr, ADTriggerMode, iSyncMode);
     status |= setIntegerParam(addr, PE_SyncTimeRBV, dwDwellTime);
 
 	return (true);
