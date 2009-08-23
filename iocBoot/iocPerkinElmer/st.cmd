@@ -2,6 +2,8 @@
 
 errlogInit(20000)
 
+< envPaths
+
 dbLoadDatabase("$(AREA_DETECTOR)/dbd/PerkinElmerApp.dbd")
 PerkinElmerApp_registerRecordDeviceDriver(pdbbase) 
 
