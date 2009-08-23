@@ -79,6 +79,8 @@ typedef enum {
     PE_PixelCorrectionFile,
     PE_PixelCorrectionFileRBV,
     PE_CorrectionsDirectory,
+	PE_FrameBufferIndex,
+	PE_ImageNumber,
     PE_FastCollectMode,
     ADLastDriverParam
 } PerkinElmerParam_t;
@@ -115,6 +117,8 @@ static asynParamString_t PerkinElmerParamString[] = {
     {PE_PixelCorrectionFile,	   	"PE_PIXEL_CORRECTION_FILE"},
     {PE_PixelCorrectionFileRBV,		"PE_PIXEL_CORRECTION_FILE_RBV"},
     {PE_CorrectionsDirectory,		"PE_CORRECTIONS_DIRECTORY"},
+	{PE_FrameBufferIndex,			"PE_FRAME_BUFFER_INDEX"},
+	{PE_ImageNumber,				"PE_IMAGE_NUMBER"},
 	{PE_FastCollectMode,            "PE_FAST_COLLECT_MODE"},
 
 };

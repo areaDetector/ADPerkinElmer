@@ -77,6 +77,8 @@ DWORD 				HISError,
 	       printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
 	       }
 		printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
+		pUsrArgs->pPerkinElmer->setIntegerParam(0, PE_ImageNumber, ActBuffFrame);
+		pUsrArgs->pPerkinElmer->setIntegerParam(0, PE_FrameBufferIndex, ActAcqFrame);
 
   	    SizeX = pUsrArgs->uiColumns;
 	    SizeY = pUsrArgs->uiRows;
