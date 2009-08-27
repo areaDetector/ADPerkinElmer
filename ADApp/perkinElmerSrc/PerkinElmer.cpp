@@ -255,6 +255,8 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
     status |= setIntegerParam(addr, PE_PixelCorrectionAvailable, NOT_AVAILABLE);
     status |= setStringParam (addr, PE_CorrectionsDirectory, "none");
 	status |= setIntegerParam (addr, PE_FastCollectMode, 0);
+	status |= setIntegerParam (addr, PE_FrameBufferIndex, 0);
+	status |= setIntegerParam (addr, PE_ImageNumber, 0);
     if (status) {
         printf("%s: unable to set camera parameters\n", functionName);
         return;
