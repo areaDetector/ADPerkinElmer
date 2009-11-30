@@ -82,6 +82,8 @@ typedef enum {
 	PE_FrameBufferIndex,
 	PE_ImageNumber,
     PE_FastCollectMode,
+    PE_SkipLeadingPulses,
+    PE_NumPulsesToSkip,
     ADLastDriverParam
 } PerkinElmerParam_t;
 
@@ -120,6 +122,8 @@ static asynParamString_t PerkinElmerParamString[] = {
 	{PE_FrameBufferIndex,			"PE_FRAME_BUFFER_INDEX"},
 	{PE_ImageNumber,				"PE_IMAGE_NUMBER"},
 	{PE_FastCollectMode,            "PE_FAST_COLLECT_MODE"},
+	{PE_SkipLeadingPulses,          "PE_SKIP_LEADING_PULSES"},
+	{PE_NumPulsesToSkip,            "PE_NUM_PULSES_TO_SKIP"},
 
 };
 
@@ -293,6 +297,8 @@ AcqData_t 		dataAcqStruct;
 	void loadCorrectionFiles (void);
 
 	void readPixelCorrectionFile (char *pixel_correction_file);
+	asynStatus PerkinElmer::setTriggerMode(void);
+	asynStatus PerkinElmer::setExposureTime(void);
 
 };
 

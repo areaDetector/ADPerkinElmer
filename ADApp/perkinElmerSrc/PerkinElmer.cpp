@@ -99,6 +99,8 @@ DWORD 				HISError,
 			uiStatus = Acquisition_DoPixelCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pPixelCorrectionList);
 
 		/** Call the routine that actually grabs the data */
+		pUsrArgs->pDataBuffer[buffOffset] = ActAcqFrame;
+		pUsrArgs->pDataBuffer[buffOffset+1] = ActBuffFrame;
 		pUsrArgs->pPerkinElmer->frameCallback (currBuff);
 	}
 
@@ -257,6 +259,8 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
 	status |= setIntegerParam (addr, PE_FastCollectMode, 0);
 	status |= setIntegerParam (addr, PE_FrameBufferIndex, 0);
 	status |= setIntegerParam (addr, PE_ImageNumber, 0);
+	status |= setIntegerParam (addr, PE_SkipLeadingPulses, 0);
+	status |= setIntegerParam (addr, PE_NumPulsesToSkip, 0);
     if (status) {
         printf("%s: unable to set camera parameters\n", functionName);
         return;
@@ -413,13 +417,20 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
 		}
 
 	case ADTriggerMode:
-        retstat |= getIntegerParam(addr, ADTriggerMode, &(this->trigModeReq) );
+        getIntegerParam(addr, ADStatus, &adstatus);
+		retstat |= getIntegerParam(addr, ADTriggerMode, &(this->trigModeReq) );
 		printf ("Setting Requested Trigger Mode: %d\n", this->trigModeReq);
-        retstat |= setIntegerParam(addr, ADTriggerMode, this->trigModeAct );
+		retstat |= setIntegerParam(addr, ADTriggerMode, this->trigModeAct );
+		//if not running go ahead and set the trigger mode
+        if ( adstatus == ADStatusIdle ) {
+			this->setTriggerMode();
+		}
 		break;
 
 	case PE_SaveCorrectionFiles: saveCorrectionFiles (); break;
 	case PE_LoadCorrectionFiles: loadCorrectionFiles (); break;
+
+
     default:
         /* If this parameter belongs to a base class call its method */
         if (function < ADLastStdParam) status = ADDriver::writeInt32(pasynUser, value);
@@ -450,6 +461,7 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     asynStatus status = asynSuccess;
     int retstat;
     int addr=0;
+    int adstatus;
 
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
      * status at the end, but that's OK */
@@ -459,9 +471,15 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     switch (function)
     {
     case ADAcquireTime:
-        retstat |= getDoubleParam(addr, ADAcquireTime, &(this->acqTimeReq) );
+        getIntegerParam(addr, ADStatus, &adstatus);
+
+		retstat |= getDoubleParam(addr, ADAcquireTime, &(this->acqTimeReq) );
 		printf ("Setting Requested Acquisition Time: %f\n", this->acqTimeReq);
-        retstat |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
+		retstat |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
+		// if the detector is idle then go ahead and set the value
+        if ( adstatus == ADStatusIdle ) {
+			this->setExposureTime();
+		}
 
 		break;
     case ADGain:
@@ -1063,48 +1081,51 @@ DWORD devAcqType, devSystemID, devSyncMode, devHwAccess;
 	}
 
 	//set dwell time
-	switch (iSyncMode)
-	{
-		case PE_FREE_RUNNING : {
-			Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_FREE_RUNNING);
+/**	switch (iSyncMode)
+/*	{
+/*		case PE_FREE_RUNNING : {
+/*			Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_FREE_RUNNING);
+/*
+/*			break;
+/*		}
+/*
+/*		case PE_EXTERNAL_TRIGGER : {
+/*			Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_EXTERNAL_TRIGGER);
+/*
+/*			break;
+/*		}
+/*
+/*		case PE_INTERNAL_TRIGGER : {
+/*			printf("Setting AcquireTime %f\n", this->acqTimeReq );
+/*			for (int loop=0;loop<timings;loop++)
+/*				printf ("m_pTimingsListBinning[%d] = %e\n", loop, m_pTimingsListBinning[loop]);
+/*			dwDwellTime = (DWORD) (this->acqTimeReq * 1000000);
+/*			printf ("internal timer requested: %d\n", dwDwellTime);
+/*
+/*			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_INTERNAL_TIMER);
+/*			error = Acquisition_SetTimerSync(hAcqDesc, &dwDwellTime);
+/*
+/*            this->acqTimeAct = dwDwellTime/1000000.;
+/*			printf ("internal timer set: %f\n", this->acqTimeAct);
+/*            setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
+/*
+/*			printf ("error: %d\n", error);
+/*			callParamCallbacks();
+/*
+/*			break;
+/*		}
+/*
+/*		case PE_SOFT_TRIGGER : {
+/*			Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_SOFT_TRIGGER);
+/*
+/*			break;
+/*		}
+/*
+/*	}
+*/
 
-			break;
-		}
-
-		case PE_EXTERNAL_TRIGGER : {
-			Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_EXTERNAL_TRIGGER);
-
-			break;
-		}
-
-		case PE_INTERNAL_TRIGGER : {
-			printf("Setting AcquireTime %f\n", this->acqTimeReq );
-			for (int loop=0;loop<timings;loop++)
-				printf ("m_pTimingsListBinning[%d] = %e\n", loop, m_pTimingsListBinning[loop]);
-			dwDwellTime = (DWORD) (this->acqTimeReq * 1000000);
-			printf ("internal timer requested: %d\n", dwDwellTime);
-
-			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_INTERNAL_TIMER);
-			error = Acquisition_SetTimerSync(hAcqDesc, &dwDwellTime);
-
-            this->acqTimeAct = dwDwellTime/1000000.;
-			printf ("internal timer set: %f\n", this->acqTimeAct);
-            status |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
-
-			printf ("error: %d\n", error);
-			callParamCallbacks();
-
-			break;
-		}
-
-		case PE_SOFT_TRIGGER : {
-			Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_SOFT_TRIGGER);
-
-			break;
-		}
-
-	}
-
+	this->setTriggerMode();
+	this->setExposureTime();
 	//ask for data organization of sensor
 	if ((uiPEResult=Acquisition_GetConfiguration(hAcqDesc, (unsigned int *) &iFrames, &uiRows, &uiColumns, &uiDataType,
 			&uiSortFlags, &bEnableIRQ, &dwAcqType, &dwSystemID, &dwSyncMode, &dwHwAccess)) != HIS_ALL_OK)
@@ -1158,8 +1179,8 @@ DWORD devAcqType, devSystemID, devSyncMode, devHwAccess;
 	status |= setIntegerParam(addr, PE_GainRBV, iGain);
 	status |= setIntegerParam(addr, PE_DwellTimeRBV, iTimeIndex);
 	status |= setIntegerParam(addr, PE_NumFrameBuffersRBV, uiNumFrameBuffers);
-    status |= setIntegerParam(addr, ADTriggerMode, iSyncMode);
-    status |= setIntegerParam(addr, PE_SyncTimeRBV, dwDwellTime);
+//    status |= setIntegerParam(addr, ADTriggerMode, iSyncMode);
+//    status |= setIntegerParam(addr, PE_SyncTimeRBV, dwDwellTime);
 
 	return (true);
 }
@@ -1181,6 +1202,8 @@ int 				iMode,
 int 				status = asynSuccess;
 DWORD 				HISError,
 					FGError;
+int numLeadingImagesToSkip = 0;
+int skipLeadingImages;
 
 	//get some information
    	status |= getIntegerParam(addr, ADImageMode, &iMode);
@@ -1188,6 +1211,7 @@ DWORD 				HISError,
    	status |= getIntegerParam(addr, PE_UseGain, &iUseGain);
    	status |= getIntegerParam(addr, PE_UsePixelCorrection, &iUsePixelCorrection);
    	status |= getIntegerParam(addr, PE_FastCollectMode, &iFastCollectMode);
+   	status |= getIntegerParam(addr, PE_SkipLeadingPulses, &skipLeadingImages);
 
    	if (status)
    		asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
@@ -1197,12 +1221,19 @@ DWORD 				HISError,
 
 	printf("Frame mode: %d\n", iMode);
 
+	if (skipLeadingImages !=0 ) {
+	   	status |= getIntegerParam(addr, PE_NumPulsesToSkip, &numLeadingImagesToSkip);
+
+		printf("Skipping Leading %d images\n", numLeadingImagesToSkip );
+	}
+
+
     switch(iMode)
     {
     	case ADImageSingle:	iFrames = 1; break;
         case ADImageMultiple: {
 		    status = getIntegerParam(addr, PE_NumFrameBuffers, (int *) &uiNumFrameBuffers);
- 		   	if ( numImages > uiNumFrameBuffers) {
+ 		   	if ( numImages > (uiNumFrameBuffers - numLeadingImagesToSkip)) {
 			    iFrames = uiNumFrameBuffers;
 			}
 			else {
@@ -1243,7 +1274,7 @@ DWORD 				HISError,
 	Acquisition_SetReady(hAcqDesc, 1);
 	switch (iMode) {
 		case ADImageSingle:
-	 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
+	 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames+numLeadingImagesToSkip,numLeadingImagesToSkip,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
 		{
 			printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
 			Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
@@ -1252,8 +1283,8 @@ DWORD 				HISError,
         break;
     	case ADImageMultiple:
 		getIntegerParam(addr, ADNumImages, &numImages);
-    	if ( numImages > uiNumFrameBuffers) {
-		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
+    	if ( numImages > (uiNumFrameBuffers-1)) {
+		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,numLeadingImagesToSkip,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
 			{
 				printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
 				Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
@@ -1261,7 +1292,7 @@ DWORD 				HISError,
 			}
 		}
 		else {
-		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
+		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames+numLeadingImagesToSkip,numLeadingImagesToSkip,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
 			{
 				printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
 				Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
@@ -1270,7 +1301,7 @@ DWORD 				HISError,
 		}
 		break;
 		case ADImageContinuous:
-		if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,0,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
+		if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,numLeadingImagesToSkip,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
 		{
 			printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
 			Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
@@ -1786,5 +1817,58 @@ unsigned int		uiStatus;
 
 }
 
-//_____________________________________________________________________________________________
+//-------------------------------------------------------------
+asynStatus PerkinElmer::setTriggerMode() {
+	int error;
+	int mode;
+	int addr = 0;
 
+	mode = this->trigModeReq;
+
+	switch (mode) {
+	   case PE_FREE_RUNNING: {
+			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_FREE_RUNNING);
+			break;
+	   }
+	   case PE_EXTERNAL_TRIGGER: {
+			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_EXTERNAL_TRIGGER);
+			break;
+	   }
+	   case PE_INTERNAL_TRIGGER: {
+			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_INTERNAL_TIMER);
+			break;
+	   }
+	   case PE_SOFT_TRIGGER: {
+			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_SOFT_TRIGGER);
+			break;
+	   }
+	}
+	this->trigModeAct = mode;
+    setIntegerParam(addr, ADTriggerMode, this->trigModeAct);
+    callParamCallbacks();
+
+	return asynSuccess;
+
+}
+
+//-------------------------------------------------------------
+asynStatus PerkinElmer::setExposureTime() {
+	const char *functionName = "setExposureTime";
+	int addr = 0;
+	DWORD dwDwellTime;
+	int status = asynSuccess;
+	int error;
+
+	asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s: Setting AcquireTime %f\n",
+				driverName, functionName, this->acqTimeReq );
+	dwDwellTime = (DWORD) (this->acqTimeReq * 1000000);
+	printf ("internal timer requested: %d\n", dwDwellTime);
+	error = Acquisition_SetTimerSync(hAcqDesc, &dwDwellTime);
+	this->acqTimeAct = dwDwellTime/1000000.;
+	printf ("internal timer set: %f\n", this->acqTimeAct);
+	status |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
+	callParamCallbacks();
+
+	return asynSuccess;
+
+}
