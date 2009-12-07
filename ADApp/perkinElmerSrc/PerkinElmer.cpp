@@ -62,9 +62,9 @@ DWORD 				HISError,
 	   }
   	pUsrArgs = ((AcqData_t *) dwValue);
 
-	pUsrArgs->pPerkinElmer->getIntegerParam(0, ADNumImagesCounter, &imageCounter);
+	pUsrArgs->pPerkinElmer->getIntegerParam(0, pUsrArgs->pPerkinElmer->getParamADNumImagesCounter(), &imageCounter);
 	imageCounter++;
-	pUsrArgs->pPerkinElmer->setIntegerParam(0, ADNumImagesCounter, imageCounter);
+	pUsrArgs->pPerkinElmer->setIntegerParam(0, pUsrArgs->pPerkinElmer->getParamADNumImagesCounter(), imageCounter);
 	pUsrArgs->pPerkinElmer->callParamCallbacks();
 
 	if ((pUsrArgs->iAcqMode == PE_ACQUIRE_ACQUISITION) && !(pUsrArgs->iFastCollectMode) )
@@ -77,8 +77,8 @@ DWORD 				HISError,
 	       printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
 	       }
 		printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
-		pUsrArgs->pPerkinElmer->setIntegerParam(0, PE_ImageNumber, ActBuffFrame);
-		pUsrArgs->pPerkinElmer->setIntegerParam(0, PE_FrameBufferIndex, ActAcqFrame);
+		pUsrArgs->pPerkinElmer->setIntegerParam(0, pUsrArgs->pPerkinElmer->getParamPE_ImageNumber(), ActBuffFrame);
+		pUsrArgs->pPerkinElmer->setIntegerParam(0, pUsrArgs->pPerkinElmer->getParamPE_FrameBufferIndex(), ActAcqFrame);
 
   	    SizeX = pUsrArgs->uiColumns;
 	    SizeY = pUsrArgs->uiRows;
@@ -177,7 +177,7 @@ DWORD 				HISError,
 PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDataType_t dataType, int maxBuffers,
                           size_t maxMemory, int priority, int stackSize)
 
-    : ADDriver(portName, 1, ADLastDriverParam, maxBuffers, maxMemory, 0, 0, ASYN_CANBLOCK, 1, priority, stackSize), imagesRemaining(0), pRaw(NULL)
+    : ADDriver(portName, 1, NUM_PERKIN_ELMER_PARAMS, maxBuffers, maxMemory, 0, 0, ASYN_CANBLOCK, 1, priority, stackSize), imagesRemaining(0), pRaw(NULL)
 {
     int status = asynSuccess;
     const char *functionName = "PerkinElmer";
@@ -210,65 +210,102 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
     dims[1] = maxSizeY;
     this->pRaw = this->pNDArrayPool->alloc(2, dims, dataType, 0, NULL);
 
-    /* Set some default values for parameters */
-    status =  setStringParam (addr, ADManufacturer, "Perkin Elmer");
-    status |= setStringParam (addr, ADModel, "XRD0820");
-    status |= setIntegerParam(addr, ADMaxSizeX, maxSizeX);
-    status |= setIntegerParam(addr, ADMaxSizeY, maxSizeY);
-    status |= setIntegerParam(addr, ADSizeX, maxSizeX);
-    status |= setIntegerParam(addr, ADSizeX, maxSizeX);
-    status |= setIntegerParam(addr, ADSizeY, maxSizeY);
-    status |= setIntegerParam(addr, NDArraySizeX, maxSizeX);
-    status |= setIntegerParam(addr, NDArraySizeY, maxSizeY);
-    status |= setIntegerParam(addr, NDArraySize, 0);
-    status |= setIntegerParam(addr, NDDataType, dataType);
-    status |= setIntegerParam(addr, ADImageMode, ADImageContinuous);
-    status |= setDoubleParam (addr, ADAcquireTime, 0.0665 );
-    status |= setDoubleParam (addr, ADAcquirePeriod, .005);
-    status |= setIntegerParam(addr, ADNumImages, 100);
-    status |= setIntegerParam(addr, ADTriggerMode, 0);
+  /* Add parameters for this driver */
+  addParam(PE_SystemIDString,                    &PE_SystemID);
+  addParam(PE_InitializeString,                  &PE_Initialize);
+  addParam(PE_StatusRBVString,                   &PE_StatusRBV);
+  addParam(PE_AcquireOffsetString,               &PE_AcquireOffset);
+  addParam(PE_NumOffsetFramesString,             &PE_NumOffsetFrames);
+  addParam(PE_UseOffsetString,                   &PE_UseOffset);
+  addParam(PE_OffsetAvailableString,             &PE_OffsetAvailable);
+  addParam(PE_AcquireGainString,                 &PE_AcquireGain);
+  addParam(PE_NumGainFramesString,               &PE_NumGainFrames);
+  addParam(PE_UseGainString,                     &PE_UseGain);
+  addParam(PE_GainAvailableString,               &PE_GainAvailable);
+  addParam(PE_PixelCorrectionAvailableString,    &PE_PixelCorrectionAvailable);
+  addParam(PE_GainString,                        &PE_Gain);
+  addParam(PE_GainRBVString,                     &PE_GainRBV);
+  addParam(PE_DwellTimeString,                   &PE_DwellTime);
+  addParam(PE_DwellTimeRBVString,                &PE_DwellTimeRBV);
+  addParam(PE_NumFrameBuffersString,             &PE_NumFrameBuffers);
+  addParam(PE_NumFrameBuffersRBVString,          &PE_NumFrameBuffersRBV);
+  addParam(PE_SyncModeString,                    &PE_SyncMode);
+  addParam(PE_SyncModeRBVString,                 &PE_SyncModeRBV);
+  addParam(PE_TriggerString,                     &PE_Trigger);
+  addParam(PE_SyncTimeString,                    &PE_SyncTime);
+  addParam(PE_SyncTimeRBVString,                 &PE_SyncTimeRBV);
+  addParam(PE_UsePixelCorrectionString,          &PE_UsePixelCorrection);
+  addParam(PE_LoadCorrectionFilesString,         &PE_LoadCorrectionFiles);
+  addParam(PE_SaveCorrectionFilesString,         &PE_SaveCorrectionFiles);
+  addParam(PE_PixelCorrectionFileString,         &PE_PixelCorrectionFile);
+  addParam(PE_PixelCorrectionFileRBVString,      &PE_PixelCorrectionFileRBV);
+  addParam(PE_CorrectionsDirectoryString,        &PE_CorrectionsDirectory);
+  addParam(PE_FrameBufferIndexString,            &PE_FrameBufferIndex);
+  addParam(PE_ImageNumberString,                 &PE_ImageNumber);
+  addParam(PE_FastCollectModeString,             &PE_FastCollectMode);
+  addParam(PE_SkipLeadingPulsesString,           &PE_SkipLeadingPulses);
+  addParam(PE_NumPulsesToSkipString,             &PE_NumPulsesToSkip);
+
+
+  /* Set some default values for parameters */
+    status =  setStringParam (ADManufacturer, "Perkin Elmer");
+    status |= setStringParam (ADModel, "XRD0820");
+    status |= setIntegerParam(ADMaxSizeX, maxSizeX);
+    status |= setIntegerParam(ADMaxSizeY, maxSizeY);
+    status |= setIntegerParam(ADSizeX, maxSizeX);
+    status |= setIntegerParam(ADSizeX, maxSizeX);
+    status |= setIntegerParam(ADSizeY, maxSizeY);
+    status |= setIntegerParam(NDArraySizeX, maxSizeX);
+    status |= setIntegerParam(NDArraySizeY, maxSizeY);
+    status |= setIntegerParam(NDArraySize, 0);
+    status |= setIntegerParam(NDDataType, dataType);
+    status |= setIntegerParam(ADImageMode, ADImageContinuous);
+    status |= setDoubleParam (ADAcquireTime, 0.0665 );
+    status |= setDoubleParam (ADAcquirePeriod, .005);
+    status |= setIntegerParam(ADNumImages, 100);
+    status |= setIntegerParam(ADTriggerMode, 0);
 
     //Detector parameter defaults
-    status |= setIntegerParam(addr, PE_SystemID, 0);
-    status |= setIntegerParam(addr, PE_Initialize, 0);
-    status |= setIntegerParam(addr, PE_StatusRBV, PE_STATUS_OK);
-    status |= setIntegerParam(addr, PE_AcquireOffset, 0);
-    status |= setIntegerParam(addr, PE_NumOffsetFrames, 10);
-    status |= setIntegerParam(addr, PE_UseOffset, NO);
-    status |= setIntegerParam(addr, PE_OffsetAvailable, NOT_AVAILABLE);
-    status |= setIntegerParam(addr, PE_AcquireGain, 0);
-    status |= setIntegerParam(addr, PE_NumGainFrames, 10);
-    status |= setIntegerParam(addr, PE_UseGain, NO);
-    status |= setIntegerParam(addr, PE_GainAvailable, NOT_AVAILABLE);
-    status |= setIntegerParam(addr, PE_Gain, 0);
-    status |= setIntegerParam(addr, PE_GainRBV, 0);
-    status |= setIntegerParam(addr, PE_DwellTime, 0);
-    status |= setIntegerParam(addr, PE_DwellTimeRBV, 0);
-    status |= setIntegerParam(addr, PE_NumFrameBuffers, 10);
-    status |= setIntegerParam(addr, PE_NumFrameBuffersRBV, 10);
-    status |= setIntegerParam(addr, PE_SyncMode, PE_INTERNAL_TRIGGER);
-    status |= setIntegerParam(addr, PE_SyncModeRBV, PE_INTERNAL_TRIGGER);
-    status |= setIntegerParam(addr, PE_Trigger, 0);
-    status |= setIntegerParam(addr, PE_LoadCorrectionFiles, 0);
-    status |= setIntegerParam(addr, PE_SaveCorrectionFiles, 0);
-    status |= setIntegerParam(addr, PE_UsePixelCorrection, 0);
-    status |= setStringParam (addr, PE_PixelCorrectionFile, "");
-    status |= setStringParam (addr, PE_PixelCorrectionFileRBV, "none");
-    status |= setIntegerParam(addr, PE_PixelCorrectionAvailable, NOT_AVAILABLE);
-    status |= setStringParam (addr, PE_CorrectionsDirectory, "none");
-	status |= setIntegerParam (addr, PE_FastCollectMode, 0);
-	status |= setIntegerParam (addr, PE_FrameBufferIndex, 0);
-	status |= setIntegerParam (addr, PE_ImageNumber, 0);
-	status |= setIntegerParam (addr, PE_SkipLeadingPulses, 0);
-	status |= setIntegerParam (addr, PE_NumPulsesToSkip, 0);
+    status |= setIntegerParam(PE_SystemID, 0);
+    status |= setIntegerParam(PE_Initialize, 0);
+    status |= setIntegerParam(PE_StatusRBV, PE_STATUS_OK);
+    status |= setIntegerParam(PE_AcquireOffset, 0);
+    status |= setIntegerParam(PE_NumOffsetFrames, 10);
+    status |= setIntegerParam(PE_UseOffset, NO);
+    status |= setIntegerParam(PE_OffsetAvailable, NOT_AVAILABLE);
+    status |= setIntegerParam(PE_AcquireGain, 0);
+    status |= setIntegerParam(PE_NumGainFrames, 10);
+    status |= setIntegerParam(PE_UseGain, NO);
+    status |= setIntegerParam(PE_GainAvailable, NOT_AVAILABLE);
+    status |= setIntegerParam(PE_Gain, 0);
+    status |= setIntegerParam(PE_GainRBV, 0);
+    status |= setIntegerParam(PE_DwellTime, 0);
+    status |= setIntegerParam(PE_DwellTimeRBV, 0);
+    status |= setIntegerParam(PE_NumFrameBuffers, 10);
+    status |= setIntegerParam(PE_NumFrameBuffersRBV, 10);
+    status |= setIntegerParam(PE_SyncMode, PE_INTERNAL_TRIGGER);
+    status |= setIntegerParam(PE_SyncModeRBV, PE_INTERNAL_TRIGGER);
+    status |= setIntegerParam(PE_Trigger, 0);
+    status |= setIntegerParam(PE_LoadCorrectionFiles, 0);
+    status |= setIntegerParam(PE_SaveCorrectionFiles, 0);
+    status |= setIntegerParam(PE_UsePixelCorrection, 0);
+    status |= setStringParam (PE_PixelCorrectionFile, "");
+    status |= setStringParam (PE_PixelCorrectionFileRBV, "none");
+    status |= setIntegerParam(PE_PixelCorrectionAvailable, NOT_AVAILABLE);
+    status |= setStringParam (PE_CorrectionsDirectory, "none");
+	status |= setIntegerParam (PE_FastCollectMode, 0);
+	status |= setIntegerParam (PE_FrameBufferIndex, 0);
+	status |= setIntegerParam (PE_ImageNumber, 0);
+	status |= setIntegerParam (PE_SkipLeadingPulses, 0);
+	status |= setIntegerParam (PE_NumPulsesToSkip, 0);
     if (status) {
         printf("%s: unable to set camera parameters\n", functionName);
         return;
     }
 	/* initialize internal variables uses to hold time delayed information.*/
-    status |= getDoubleParam(addr, ADAcquireTime, &(this->acqTimeReq) );
+    status |= getDoubleParam(ADAcquireTime, &(this->acqTimeReq) );
     this->acqTimeAct = this->acqTimeReq;
-    status |= getIntegerParam(addr, ADTriggerMode, &(this->trigModeReq) );
+    status |= getIntegerParam(ADTriggerMode, &(this->trigModeReq) );
     this->trigModeAct = this->trigModeReq;
     initializeDetector ();
 
@@ -308,8 +345,7 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
     status = setIntegerParam(addr, function, value);
 
     /* For a real detector this is where the parameter is sent to the hardware */
-    switch (function) {
-    case ADAcquire:
+    if (function == ADAcquire) {
         getIntegerParam(addr, ADStatus, &adstatus);
 
         //Start acquisition
@@ -347,28 +383,19 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
 			setIntegerParam(addr, ADAcquire, 0);
            	setIntegerParam(addr, ADStatus, ADStatusIdle);
 		    callParamCallbacks(addr, addr);
-//			abortStatus = 0;
-//			while (abortStatus == 0) {
-//				abortStatus = Acquisition_Abort(hAcqDesc);
-//			}
-//            getIntegerParam(addr, ADStatus, &iDetectorStatus);
-// 	        while (iDetectorStatus){
-// 				printf("Status still not set\n");
-// 				getIntegerParam(addr, ADStatus, &iDetectorStatus);
-//			}
  			this->abortAcq = 1;
           asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s: Idle!\n", driverName, functionName);
         }
-        break;
-    case ADBinX:
-    case ADBinY:
-    case ADMinX:
-    case ADMinY:
-    case ADSizeX:
-    case ADSizeY:
-    case NDDataType:
-        break;
-    case ADImageMode:
+	}
+	else if ( (function == ADBinX) ||
+		(function == ADBinY) ||
+		(function == ADMinX) ||
+		(function == ADMinY) ||
+		(function == ADSizeX) ||
+		(function == ADSizeY) ||
+		(function == NDDataType) ) {
+	}
+	else if (function == ADImageMode) {
         /* The image mode may have changed while we are acquiring,
          * set the images remaining appropriately. */
         switch (value) {
@@ -384,39 +411,28 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
             this->imagesRemaining = -1;
             break;
         }
-        break;
-    case PE_Initialize:
-    	{
-			if ( adstatus == ADStatusIdle ) {
-				initializeDetector ();
-			}
-    		break;
+	}
+    else if (function == PE_Initialize) {
+		if ( adstatus == ADStatusIdle ) {
+			initializeDetector ();
 		}
-    case PE_AcquireOffset:
-    	{
-			if ( adstatus == ADStatusIdle ) {
-//				setIntegerParam(addr, PE_StatusRBV, PE_STATUS_RUNNING_OFFSET);
-//				callParamCallbacks(addr, addr);
-	    		acquireOffsetImage ();
-			}
-    		break;
+	}
+    else if (function == PE_AcquireOffset) {
+		if ( adstatus == ADStatusIdle ) {
+			acquireOffsetImage ();
 		}
-    case PE_AcquireGain:
-    	{
-			if ( adstatus == ADStatusIdle ) {
-				acquireGainImage ();
-			}
-			break;
+	}
+    else if (function ==  PE_AcquireGain) {
+		if ( adstatus == ADStatusIdle ) {
+			acquireGainImage ();
 		}
-    case PE_Trigger:
-    	{
-			if ((uiPEResult = Acquisition_SetFrameSync(hAcqDesc))!=HIS_ALL_OK)
-				printf("Error: %d  Acquisition_SetFrameSync failed!\n", uiPEResult);
+	}
+    else if (function == PE_Trigger) {
+		if ((uiPEResult = Acquisition_SetFrameSync(hAcqDesc))!=HIS_ALL_OK)
+			printf("Error: %d  Acquisition_SetFrameSync failed!\n", uiPEResult);
+	}
 
-			break;
-		}
-
-	case ADTriggerMode:
+	else if (function == ADTriggerMode) {
         getIntegerParam(addr, ADStatus, &adstatus);
 		retstat |= getIntegerParam(addr, ADTriggerMode, &(this->trigModeReq) );
 		printf ("Setting Requested Trigger Mode: %d\n", this->trigModeReq);
@@ -425,16 +441,20 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
         if ( adstatus == ADStatusIdle ) {
 			this->setTriggerMode();
 		}
-		break;
+	}
+	else if (function == PE_SaveCorrectionFiles) {
+		saveCorrectionFiles ();
+	}
+	else if (function == PE_LoadCorrectionFiles) {
+		loadCorrectionFiles ();
+	}
 
-	case PE_SaveCorrectionFiles: saveCorrectionFiles (); break;
-	case PE_LoadCorrectionFiles: loadCorrectionFiles (); break;
 
-
-    default:
+    else {
         /* If this parameter belongs to a base class call its method */
-        if (function < ADLastStdParam) status = ADDriver::writeInt32(pasynUser, value);
-        break;
+        if (function < PE_FIRST_PARAM) {
+			status = ADDriver::writeInt32(pasynUser, value);
+		}
     }
 
     /* Do callbacks so higher layers see any changes */
@@ -468,9 +488,7 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     status = setDoubleParam(addr, function, value);
 
     /* Changing any of the following parameters requires recomputing the base image */
-    switch (function)
-    {
-    case ADAcquireTime:
+    if (function == ADAcquireTime) {
         getIntegerParam(addr, ADStatus, &adstatus);
 
 		retstat |= getDoubleParam(addr, ADAcquireTime, &(this->acqTimeReq) );
@@ -481,13 +499,14 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 			this->setExposureTime();
 		}
 
-		break;
-    case ADGain:
-        break;
-    default:
+	}
+    else if (function == ADGain) {
+	}
+    else {
         /* If this parameter belongs to a base class call its method */
-        if (function < ADLastStdParam) status = ADDriver::writeFloat64(pasynUser, value);
-        break;
+        if (function < PE_FIRST_PARAM) {
+			status = ADDriver::writeFloat64(pasynUser, value);
+		}
     }
 
     /* Do callbacks so higher layers see any changes */
@@ -509,37 +528,37 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 //_____________________________________________________________________________________________
 
 /* asynDrvUser routines */
-asynStatus PerkinElmer::drvUserCreate(asynUser *pasynUser,
-                                      const char *drvInfo,
-                                      const char **pptypeName, size_t *psize)
-{
-    asynStatus status;
-    int param;
-    const char *functionName = "drvUserCreate";
-
-    /* See if this is one of our standard parameters */
-    status = findParam(PerkinElmerParamString, NUM_PERKIN_ELMER_PARAMS,
-                       drvInfo, &param);
-
-    if (status == asynSuccess) {
-        pasynUser->reason = param;
-        if (pptypeName) {
-            *pptypeName = epicsStrDup(drvInfo);
-        }
-        if (psize) {
-            *psize = sizeof(param);
-        }
-        asynPrint(pasynUser, ASYN_TRACE_FLOW,
-                  "%s:%s: drvInfo=%s, param=%d\n",
-                  driverName, functionName, drvInfo, param);
-        return(asynSuccess);
-    }
-
-    /* If not, then see if it is a base class parameter */
-    status = ADDriver::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
-    return(status);
-}
-
+/*asynStatus PerkinElmer::drvUserCreate(asynUser *pasynUser,
+/*                                      const char *drvInfo,
+/*                                      const char **pptypeName, size_t *psize)
+/*{
+/*    asynStatus status;
+/*    int param;
+/*    const char *functionName = "drvUserCreate";
+/*
+/*    /* See if this is one of our standard parameters */
+/*/*    status = findParam(PerkinElmerParamString, NUM_PERKIN_ELMER_PARAMS,
+/*                       drvInfo, &param);
+/*
+/*    if (status == asynSuccess) {
+/*        pasynUser->reason = param;
+/*        if (pptypeName) {
+/*            *pptypeName = epicsStrDup(drvInfo);
+/*        }
+/*        if (psize) {
+/*            *psize = sizeof(param);
+/*        }
+/*        asynPrint(pasynUser, ASYN_TRACE_FLOW,
+/*                  "%s:%s: drvInfo=%s, param=%d\n",
+/*                  driverName, functionName, drvInfo, param);
+/*        return(asynSuccess);
+/*    }
+/*
+/*    /* If not, then see if it is a base class parameter */
+/*    status = ADDriver::drvUserCreate(pasynUser, drvInfo, pptypeName, psize);
+/*    return(status);
+/*}
+*/
 //_____________________________________________________________________________________________
 
 void PerkinElmer::report(FILE *fp, int details)
@@ -728,6 +747,20 @@ int 	addr=0,
 
 	bAcquiringGain = false;
 }
+
+//_____________________________________________________________________________________________
+	int PerkinElmer::getParamADNumImagesCounter() {
+			return this->ADNumImagesCounter;
+	}
+//_____________________________________________________________________________________________
+	int PerkinElmer::getParamPE_ImageNumber() {
+		return this->PE_ImageNumber;
+	}
+
+//_____________________________________________________________________________________________
+	int PerkinElmer::getParamPE_FrameBufferIndex(){
+		return this->PE_FrameBufferIndex;
+	}
 
 //_____________________________________________________________________________________________
 

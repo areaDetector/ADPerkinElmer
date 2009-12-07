@@ -47,87 +47,6 @@ static const char *driverName = "drvPerkinElmer";
 
 //______________________________________________________________________________________________
 
-/* If we have any private driver parameters they begin with ADFirstDriverParam and should end
-   with ADLastDriverParam, which is used for setting the size of the parameter library table */
-typedef enum {
-	PE_SystemID = ADLastStdParam,
-    PE_Initialize,
-    PE_StatusRBV,
-    PE_AcquireOffset,
-    PE_NumOffsetFrames,
-    PE_UseOffset,
-    PE_OffsetAvailable,
-    PE_AcquireGain,
-    PE_NumGainFrames,
-    PE_UseGain,
-    PE_GainAvailable,
-    PE_PixelCorrectionAvailable,
-    PE_Gain,
-    PE_GainRBV,
-    PE_DwellTime,
-    PE_DwellTimeRBV,
-    PE_NumFrameBuffers,
-    PE_NumFrameBuffersRBV,
-    PE_SyncMode,
-    PE_SyncModeRBV,
-    PE_Trigger,
-    PE_SyncTime,
-    PE_SyncTimeRBV,
-    PE_UsePixelCorrection,
-    PE_LoadCorrectionFiles,
-    PE_SaveCorrectionFiles,
-    PE_PixelCorrectionFile,
-    PE_PixelCorrectionFileRBV,
-    PE_CorrectionsDirectory,
-	PE_FrameBufferIndex,
-	PE_ImageNumber,
-    PE_FastCollectMode,
-    PE_SkipLeadingPulses,
-    PE_NumPulsesToSkip,
-    ADLastDriverParam
-} PerkinElmerParam_t;
-
-//______________________________________________________________________________________________
-
-static asynParamString_t PerkinElmerParamString[] = {
-    {PE_SystemID,     				"PE_SYSTEMID"},
-    {PE_Initialize,     			"PE_INITIALIZE"},
-    {PE_StatusRBV,			     	"PE_STATUS_RBV"},
-	{PE_AcquireOffset,				"PE_ACQUIRE_OFFSET"},
-    {PE_NumOffsetFrames,	   		"PE_NUM_OFFSET_FRAMES"},
-    {PE_UseOffset,	 		  		"PE_USE_OFFSET"},
-    {PE_OffsetAvailable,			"PE_OFFSET_AVAILABLE"},
-    {PE_AcquireGain,  		   		"PE_ACQUIRE_GAIN"},
-    {PE_NumGainFrames,		   		"PE_NUM_GAIN_FRAMES"},
-    {PE_UseGain,	 	  			"PE_USE_GAIN"},
-    {PE_GainAvailable,				"PE_GAIN_AVAILABLE"},
-    {PE_PixelCorrectionAvailable,	"PE_PIXEL_CORRECTION_AVAILABLE"},
-    {PE_Gain,   	  				"PE_GAIN"},
-    {PE_GainRBV,	    	 		"PE_GAIN_RBV"},
-    {PE_DwellTime,     				"PE_DWELL_TIME"},
-    {PE_DwellTimeRBV,   	  		"PE_DWELL_TIME_RBV"},
-    {PE_NumFrameBuffers,			"PE_NUM_FRAME_BUFFERS"},
-    {PE_NumFrameBuffersRBV,			"PE_NUM_FRAME_BUFFERS_RBV"},
-    {PE_SyncMode,     				"PE_SYNC_MODE"},
-    {PE_SyncModeRBV,     			"PE_SYNC_MODE_RBV"},
-    {PE_Trigger,   	  				"PE_TRIGGER"},
-    {PE_SyncTime,     				"PE_SYNC_TIME"},
-    {PE_SyncTimeRBV,     			"PE_SYNC_TIME_RBV"},
-    {PE_UsePixelCorrection,			"PE_USE_PIXEL_CORRECTION"},
-    {PE_LoadCorrectionFiles,		"PE_LOAD_CORRECTION_FILES"},
-    {PE_SaveCorrectionFiles,		"PE_SAVE_CORRECTION_FILES"},
-    {PE_PixelCorrectionFile,	   	"PE_PIXEL_CORRECTION_FILE"},
-    {PE_PixelCorrectionFileRBV,		"PE_PIXEL_CORRECTION_FILE_RBV"},
-    {PE_CorrectionsDirectory,		"PE_CORRECTIONS_DIRECTORY"},
-	{PE_FrameBufferIndex,			"PE_FRAME_BUFFER_INDEX"},
-	{PE_ImageNumber,				"PE_IMAGE_NUMBER"},
-	{PE_FastCollectMode,            "PE_FAST_COLLECT_MODE"},
-	{PE_SkipLeadingPulses,          "PE_SKIP_LEADING_PULSES"},
-	{PE_NumPulsesToSkip,            "PE_NUM_PULSES_TO_SKIP"},
-
-};
-
-#define NUM_PERKIN_ELMER_PARAMS (sizeof(PerkinElmerParamString)/sizeof(PerkinElmerParamString[0]))
 
 typedef enum
 {
@@ -225,10 +144,10 @@ typedef struct {
 class PerkinElmer : public ADDriver
 {
 public:
-int 				imagesRemaining;
-epicsEventId 		startAcquisitionEventId;
-epicsEventId 		stopAcquisitionEventId;
-NDArray 			*pRaw;
+	int 				imagesRemaining;
+	epicsEventId 		startAcquisitionEventId;
+	epicsEventId 		stopAcquisitionEventId;
+	NDArray 			*pRaw;
 
     PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDataType_t dataType, int maxBuffers, size_t maxMemory,
                      int priority, int stackSize);
@@ -236,7 +155,7 @@ NDArray 			*pRaw;
     /* These are the methods that we override from ADDriver */
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
     virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
-    virtual asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize);
+//    virtual asynStatus drvUserCreate(asynUser *pasynUser, const char *drvInfo, const char **pptypeName, size_t *psize);
     void report(FILE *fp, int details);
 
     void acquireTask ();
@@ -244,42 +163,83 @@ NDArray 			*pRaw;
 	void frameCallback (unsigned int buffFrame);
 	void offsetCallback ();
 	void gainCallback ();
-
+	int getParamADNumImagesCounter();
+	int getParamPE_ImageNumber();
+	int getParamPE_FrameBufferIndex();
     ~PerkinElmer ();
 
-private:
-HACQDESC			hAcqDesc;
-unsigned short		*pAcqBuffer,
-					*pOffsetBuffer,
-					*pBadPixelMap;
-DWORD				*pGainBuffer;
-DWORD		dwBoardType,
-			dwAcqType,
-			dwSystemID,
-			dwSyncMode,
-			dwHwAccess;
-int			abortAcq,
-			iChannelNum,
-			*pPixelCorrectionList;
-BOOL		bEnableIRQ,
-			bSelfInit,
-			bInitAlways,
-			bAcquiringOffset,
-			bAcquiringGain;
-UINT		uiRows,
-			uiColumns,
-			uiDataType,
-			uiSortFlags,
-			uiNumSensors,
-			uiChannelType,
-			uiPEResult,
-			uiNumFrameBuffers;
-double      acqTimeReq,
-            acqTimeAct;
-int			trigModeReq,
-			trigModeAct;
+protected:
+	int PE_SystemID;
+	#define PE_FIRST_PARAM PE_SystemID
+    int PE_Initialize;
+    int PE_StatusRBV;
+    int PE_AcquireOffset;
+    int PE_NumOffsetFrames;
+    int PE_UseOffset;
+    int PE_OffsetAvailable;
+    int PE_AcquireGain;
+    int PE_NumGainFrames;
+    int PE_UseGain;
+    int PE_GainAvailable;
+    int PE_PixelCorrectionAvailable;
+    int PE_Gain;
+    int PE_GainRBV;
+    int PE_DwellTime;
+    int PE_DwellTimeRBV;
+    int PE_NumFrameBuffers;
+    int PE_NumFrameBuffersRBV;
+    int PE_SyncMode;
+    int PE_SyncModeRBV;
+    int PE_Trigger;
+    int PE_SyncTime;
+    int PE_SyncTimeRBV;
+    int PE_UsePixelCorrection;
+    int PE_LoadCorrectionFiles;
+    int PE_SaveCorrectionFiles;
+    int PE_PixelCorrectionFile;
+    int PE_PixelCorrectionFileRBV;
+    int PE_CorrectionsDirectory;
+	int PE_FrameBufferIndex;
+	int PE_ImageNumber;
+    int PE_FastCollectMode;
+    int PE_SkipLeadingPulses;
+    int PE_NumPulsesToSkip;
+	#define PE_LAST_PARAM PE_NumPulsesToSkip
 
-AcqData_t 		dataAcqStruct;
+
+private:
+	HACQDESC			hAcqDesc;
+	unsigned short		*pAcqBuffer,
+						*pOffsetBuffer,
+						*pBadPixelMap;
+	DWORD				*pGainBuffer;
+	DWORD		dwBoardType,
+				dwAcqType,
+				dwSystemID,
+				dwSyncMode,
+				dwHwAccess;
+	int			abortAcq,
+				iChannelNum,
+				*pPixelCorrectionList;
+	BOOL		bEnableIRQ,
+				bSelfInit,
+				bInitAlways,
+				bAcquiringOffset,
+				bAcquiringGain;
+	UINT		uiRows,
+				uiColumns,
+				uiDataType,
+				uiSortFlags,
+				uiNumSensors,
+				uiChannelType,
+				uiPEResult,
+				uiNumFrameBuffers;
+	double      acqTimeReq,
+				acqTimeAct;
+	int			trigModeReq,
+				trigModeAct;
+
+	AcqData_t 		dataAcqStruct;
 
 	template <typename epicsType> void computeArray(int maxSizeX, int maxSizeY, unsigned int buffFrame);
 
@@ -302,6 +262,43 @@ AcqData_t 		dataAcqStruct;
 
 };
 
+//______________________________________________________________________________________________
+#define PE_SystemIDString     				"PE_SYSTEMID"
+#define PE_InitializeString        			"PE_INITIALIZE"
+#define PE_StatusRBVString			     	"PE_STATUS_RBV"
+#define PE_AcquireOffsetString				"PE_ACQUIRE_OFFSET"
+#define PE_NumOffsetFramesString	   		"PE_NUM_OFFSET_FRAMES"
+#define PE_UseOffsetString	 		  		"PE_USE_OFFSET"
+#define PE_OffsetAvailableString			"PE_OFFSET_AVAILABLE"
+#define PE_AcquireGainString  		   		"PE_ACQUIRE_GAIN"
+#define PE_NumGainFramesString		   		"PE_NUM_GAIN_FRAMES"
+#define PE_UseGainString	 	  			"PE_USE_GAIN"
+#define PE_GainAvailableString				"PE_GAIN_AVAILABLE"
+#define PE_PixelCorrectionAvailableString	"PE_PIXEL_CORRECTION_AVAILABLE"
+#define PE_GainString   	  				"PE_GAIN"
+#define PE_GainRBVString	    	 		"PE_GAIN_RBV"
+#define PE_DwellTimeString     				"PE_DWELL_TIME"
+#define PE_DwellTimeRBVString   	  		"PE_DWELL_TIME_RBV"
+#define PE_NumFrameBuffersString			"PE_NUM_FRAME_BUFFERS"
+#define PE_NumFrameBuffersRBVString			"PE_NUM_FRAME_BUFFERS_RBV"
+#define PE_SyncModeString     				"PE_SYNC_MODE"
+#define PE_SyncModeRBVString     			"PE_SYNC_MODE_RBV"
+#define PE_TriggerString   	  				"PE_TRIGGER"
+#define PE_SyncTimeString     				"PE_SYNC_TIME"
+#define PE_SyncTimeRBVString     			"PE_SYNC_TIME_RBV"
+#define PE_UsePixelCorrectionString			"PE_USE_PIXEL_CORRECTION"
+#define PE_LoadCorrectionFilesString		"PE_LOAD_CORRECTION_FILES"
+#define PE_SaveCorrectionFilesString		"PE_SAVE_CORRECTION_FILES"
+#define PE_PixelCorrectionFileString	   	"PE_PIXEL_CORRECTION_FILE"
+#define PE_PixelCorrectionFileRBVString		"PE_PIXEL_CORRECTION_FILE_RBV"
+#define PE_CorrectionsDirectoryString		"PE_CORRECTIONS_DIRECTORY"
+#define PE_FrameBufferIndexString			"PE_FRAME_BUFFER_INDEX"
+#define PE_ImageNumberString				"PE_IMAGE_NUMBER"
+#define PE_FastCollectModeString            "PE_FAST_COLLECT_MODE"
+#define PE_SkipLeadingPulsesString          "PE_SKIP_LEADING_PULSES"
+#define PE_NumPulsesToSkipString            "PE_NUM_PULSES_TO_SKIP"
+
+#define NUM_PERKIN_ELMER_PARAMS (&PE_LAST_PARAM - &PE_FIRST_PARAM + 1)
 //______________________________________________________________________________________________
 
 #endif
