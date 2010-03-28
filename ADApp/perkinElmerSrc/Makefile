@@ -11,6 +11,8 @@ LIBRARY_IOC_WIN32 = PerkinElmer
 LIB_SRCS += PerkinElmer.cpp
 LIB_SRCS += drvPerkinElmerEpics.c
 LIB_LIBS += ADBase NDPlugin netCDF
+LIB_LIBS_Linux += PvAPI ImageLib
+LIB_LIBS_WIN32 += PvAPI ImageLib
 LIB_LIBS += sscan autosave
 LIB_LIBS += asyn busy
 LIB_LIBS += $(EPICS_BASE_IOC_LIBS)
@@ -36,6 +38,8 @@ PerkinElmerApp_SRCS_DEFAULT += PerkinElmerApp_registerRecordDeviceDriver.cpp Per
 # Add locally compiled object code
 PerkinElmerApp_LIBS += PerkinElmer
 PerkinElmerApp_LIBS += NDPlugin ADBase netCDF
+PerkinElmerApp_LIBS_Linux += PvAPI ImageLib
+PerkinElmerApp_LIBS_WIN32 += PvAPI ImageLib
 PerkinElmerApp_LIBS += sscan autosave 
 PerkinElmerApp_LIBS += asyn busy
 PerkinElmerApp_LIBS += $(EPICS_BASE_IOC_LIBS)
