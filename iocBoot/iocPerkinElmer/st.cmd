@@ -5,7 +5,7 @@ errlogInit(20000)
 dbLoadDatabase("$(AREA_DETECTOR)/dbd/PerkinElmerApp.dbd")
 PerkinElmerApp_registerRecordDeviceDriver(pdbbase) 
 
-epicsEnvSet("PREFIX", "JPHPE1:")
+epicsEnvSet("PREFIX", "13PE1:")
 epicsEnvSet("PORT",   "PEDET1")
 epicsEnvSet("QSIZE",  "20")
 
