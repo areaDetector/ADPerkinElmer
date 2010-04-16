@@ -21,8 +21,8 @@ LIB_LIBS += $(EPICS_BASE_IOC_LIBS)
 LIB_LIBS += XISL
 
 # Note, the following files were manually copied from the Perkin Elmer XIS SDK to this directory
-#BIN_INSTALLS_WIN32    += ../XISL.dll
-#LIB_INSTALLS_WIN32    += ../XISL.lib
+BIN_INSTALLS_WIN32    += ../XISL.dll
+LIB_INSTALLS_WIN32    += ../XISL.lib
 
 #==================================
 PROD_IOC_WIN32 += PerkinElmerApp
@@ -30,23 +30,18 @@ PROD_IOC_WIN32 += PerkinElmerApp
 DBD += PerkinElmerApp.dbd
 DBD += PerkinElmerSupport.dbd
 
-USR_INCLUDES = -IC:/XIS/SDK
-
 # <name>_registerRecordDeviceDriver.cpp will be created from <name>.dbd
 PerkinElmerApp_SRCS_DEFAULT += PerkinElmerApp_registerRecordDeviceDriver.cpp PerkinElmerAppMain.cpp
 
 # Add locally compiled object code
 PerkinElmerApp_LIBS += PerkinElmer
+PerkinElmerApp_LIBS += XISL
 PerkinElmerApp_LIBS += NDPlugin ADBase netCDF
 PerkinElmerApp_LIBS_Linux += PvAPI ImageLib
 PerkinElmerApp_LIBS_WIN32 += PvAPI ImageLib
 PerkinElmerApp_LIBS += sscan autosave 
 PerkinElmerApp_LIBS += asyn busy
 PerkinElmerApp_LIBS += $(EPICS_BASE_IOC_LIBS)
-
-#Add detector SDK
-XISL_DIR = C:/XIS/SDK
-PerkinElmerApp_LIBS += XISL
 
 PerkinElmerApp_LIBS_WIN32   += libtiff jpeg libNeXus.dll
 
