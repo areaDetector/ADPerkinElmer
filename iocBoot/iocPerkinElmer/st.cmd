@@ -10,6 +10,7 @@ epicsEnvSet("PORT",   "PEDET1")
 epicsEnvSet("QSIZE",  "20")
 epicsEnvSet("XSIZE",  "1024")
 epicsEnvSet("YSIZE",  "1024")
+epicsEnvSet("NCHANS", "2048")
 
 # Create a PerkinElmer driver
 # PerkinElmerConfig(const char *portName, int maxSizeX, int maxSizeY, int dataType, int maxBuffers, size_t maxMemory, int priority, int stackSize)
