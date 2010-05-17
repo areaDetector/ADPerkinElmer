@@ -13,7 +13,7 @@ LIB_SRCS += drvPerkinElmerEpics.c
 LIB_LIBS += ADBase NDPlugin netCDF
 LIB_LIBS_Linux += PvAPI ImageLib
 LIB_LIBS_WIN32 += PvAPI ImageLib
-LIB_LIBS += calc busy sscan autosave
+LIB_LIBS += calc busy sscan autosave mca
 LIB_LIBS += asyn
 LIB_LIBS += $(EPICS_BASE_IOC_LIBS)
 
@@ -39,7 +39,7 @@ PerkinElmerApp_LIBS += XISL
 PerkinElmerApp_LIBS += NDPlugin ADBase netCDF
 PerkinElmerApp_LIBS_Linux += PvAPI ImageLib
 PerkinElmerApp_LIBS_WIN32 += PvAPI ImageLib
-PerkinElmerApp_LIBS += calc busy sscan autosave 
+PerkinElmerApp_LIBS += calc busy sscan autosave mca
 PerkinElmerApp_LIBS += asyn
 PerkinElmerApp_LIBS += $(EPICS_BASE_IOC_LIBS)
 
