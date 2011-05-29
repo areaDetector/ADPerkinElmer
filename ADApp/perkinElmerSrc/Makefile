@@ -4,7 +4,9 @@ include $(TOP)/configure/CONFIG
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 #=============================
 
-LIBRARY_IOC_WIN32 = PerkinElmer
+# Note: the SDK does support x64 but we need to get the files
+ifeq (win32-x86, $(findstring win32-x86, $(T_A)))
+LIBRARY_IOC = PerkinElmer
 LIB_SRCS += PerkinElmer.cpp
 LIB_SRCS += drvPerkinElmerEpics.c
 
@@ -12,10 +14,11 @@ LIB_SRCS += drvPerkinElmerEpics.c
 LIB_LIBS += XISL
 
 # Note, the following files were manually copied from the Perkin Elmer XIS SDK to this directory
-BIN_INSTALLS_WIN32    += ../XISL.dll
-LIB_INSTALLS_WIN32    += ../XISL.lib
+BIN_INSTALLS   += ../XISL.dll
+LIB_INSTALLS   += ../XISL.lib
 
-PROD_IOC_WIN32 += PerkinElmerApp
+PROD_IOC += PerkinElmerApp
+endif
 
 # <name>.dbd will be created from <name>Include.dbd
 DBD += PerkinElmerApp.dbd
