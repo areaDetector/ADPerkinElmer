@@ -8,7 +8,7 @@
     <Attribute  name="PE_UseGain"         type="PARAM" source="PE_USE_GAIN"          datatype="INT"  />
     <Attribute  name="PE_OffsetAvailable" type="PARAM" source="PE_OFFSET_AVAILABLE"  datatype="INT"  />
     <Attribute  name="PE_GainAvailable"   type="PARAM" source="PE_GAIN_AVAILABLE"    datatype="INT"  />
-    <Attribute  name="AcqTime"            type="PARAM" source="ACQ_TIME"             datatype="FLOAT"  />
+    <Attribute  name="AcqTime"            type="PARAM" source="ACQ_TIME"             datatype="DOUBLE"  />
     <Attribute  name="TriggerMode"        type="PARAM" source="TRIGGER_MODE"         datatype="INT"  />
     <Attribute  name="MaxSizeX"           type="PARAM" source="MAX_SIZE_X"           datatype="INT"  />
     <Attribute  name="MaxSizeY"           type="PARAM" source="MAX_SIZE_Y"           datatype="INT"  />
