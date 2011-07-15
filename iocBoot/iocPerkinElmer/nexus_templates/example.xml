@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<NXroot name= top>
+<NXroot name="top">
 <Facility type="UserGroup">
     <facility_name type="CONST" outtype="NX_CHAR" > APS </facility_name>
-    <facility_sector type="CONST" outtype="NX_CHAR">Xor/UNI</facility_sector>
-    <facility_beamline type="CONST" outtype="NX_CHAR">34ID-E</facility_beamline>
+    <facility_sector type="CONST" outtype="NX_CHAR">XSD/34</facility_sector>
+    <facility_beamline type="CONST" outtype="NX_CHAR">34ID</facility_beamline>
     <facility_station type="CONST" outtype="NX_CHAR">E</facility_station>
     <facility_float type="CONST" outtype="NX_FLOAT32">3.1415</facility_float>
     <facility_int type="CONST" outtype="NX_INT32">12</facility_int>
 </Facility>
 <NXentry name = "Collected Data" >
     <title >My title</title>
-     <experiment_identifier ></experiment_identifier>
+    <experiment_identifier/>
     <experiment_description>Describe here</experiment_description>
     <experiment_documentation>Add here</experiment_documentation>
     <collection_identifier></collection_identifier>
@@ -49,11 +49,11 @@
             <Attr name="model" type="ND_ATTR" source="CameraModel" /> 
             <Attr name="float" type="CONST" outtype="NX_FLOAT32" > 1.0</Attr>
             <Attr name="double" type="CONST" outtype="NX_FLOAT64" >2.0</Attr> 
-;            <Attr name="randomText" type="CONST" outtype="NX_CHAR">Hello world</Attr>
-;            <Attr name="randomText2" type="CONST" >goodbye world</Attr>
+	    <!-- <Attr name="randomText" type="CONST" outtype="NX_CHAR">Hello world</Attr> -->
+	    <!-- <Attr name="randomText2" type="CONST" >goodbye world</Attr> -->
         </data>
     </NXdata>
-    <NXinstrument name=microDiffraction>
+    <NXinstrument name="microDiffraction">
     </NXinstrument>
   
 </NXentry>
