@@ -9,15 +9,17 @@
     <facility_float type="CONST" outtype="NX_FLOAT32">3.1415</facility_float>
     <facility_int type="CONST" outtype="NX_INT32">12</facility_int>
 </Facility>
-<NXentry name = "Collected Data" >
+<NXentry name = "Collected_Data" >
     <title >My title</title>
-    <experiment_identifier/>
+    <experiment_identifier type="CONST"/>
     <experiment_description>Describe here</experiment_description>
     <experiment_documentation>Add here</experiment_documentation>
     <collection_identifier></collection_identifier>
     <collection_description></collection_description>
     <entry_identifier></entry_identifier>
-    <definition version="" URL="">
+    <definition type="CONST">
+        <Attr name="version" type="CONST" outtype="NX_CHAR">1.0</Attr>
+        <Attr name="URL" type="CONST" outtype="NX_CHAR">https://svn.nexusformat.org/definitions/trunk/base_classes/NXentry.nxdl.xml</Attr>
     </definition>
     <start_time> </start_time>
     <end_time> </end_time>
