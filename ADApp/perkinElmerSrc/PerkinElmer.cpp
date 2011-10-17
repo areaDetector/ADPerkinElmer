@@ -1,7 +1,7 @@
  /* PerkinElmer.cpp
  *
  * This is a driver the PerkinElmer Image Plates
- *		Models:	XRD0820
+ *        Models:    XRD0820
  *
  *
  * Author: Brian Tieman
@@ -40,73 +40,75 @@ static void acquireTaskC(void *drvPvt)
 /** callback function that is called by XISL every frame at end of data transfer */
 void CALLBACK OnEndFrameCallback(HACQDESC hAcqDesc)
 {
-DWORD			dwValue;
-AcqData_t 		*pUsrArgs;
-unsigned int	uiStatus;
+void            *dwValue;
+AcqData_t       *pUsrArgs;
+unsigned int    uiStatus;
 unsigned int    SizeX, SizeY;
 DWORD ActAcqFrame;
 DWORD ActBuffFrame;
 unsigned int currBuff;
 unsigned int buffOffset;
 int imageCounter;
-DWORD 				HISError,
-					FGError;
+DWORD       HISError,
+            FGError;
 
-	printf ("End Frame callback called...\n");
+    printf ("End Frame callback called...\n");
 
-  	uiStatus = 	Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
-	if ( uiStatus != 0 ) {
-	   printf("Error: %d Acquisition_GetAcqData failed in OnEndFrameCallback!\n", uiStatus);
-	   Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-	   printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
-	   }
-  	pUsrArgs = ((AcqData_t *) dwValue);
+#ifdef __X64
+    uiStatus =     Acquisition_GetAcqData(hAcqDesc, &dwValue);
+#else
+    uiStatus =     Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
+#endif
+    if ( uiStatus != 0 ) {
+       printf("Error: %d Acquisition_GetAcqData failed in OnEndFrameCallback!\n", uiStatus);
+       Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+       printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+    }
+    pUsrArgs = ((AcqData_t *) dwValue);
 
-	pUsrArgs->pPerkinElmer->getIntegerParam(0, pUsrArgs->pPerkinElmer->getParamADNumImagesCounter(), &imageCounter);
-	imageCounter++;
-	pUsrArgs->pPerkinElmer->setIntegerParam(0, pUsrArgs->pPerkinElmer->getParamADNumImagesCounter(), imageCounter);
-	pUsrArgs->pPerkinElmer->callParamCallbacks();
+    pUsrArgs->pPerkinElmer->getIntegerParam(0, pUsrArgs->pPerkinElmer->getParamADNumImagesCounter(), &imageCounter);
+    imageCounter++;
+    pUsrArgs->pPerkinElmer->setIntegerParam(0, pUsrArgs->pPerkinElmer->getParamADNumImagesCounter(), imageCounter);
+    pUsrArgs->pPerkinElmer->callParamCallbacks();
 
-	if ((pUsrArgs->iAcqMode == PE_ACQUIRE_ACQUISITION) && !(pUsrArgs->iFastCollectMode) )
-	{
+    if ((pUsrArgs->iAcqMode == PE_ACQUIRE_ACQUISITION) && !(pUsrArgs->iFastCollectMode) )
+    {
         /** find offset into secondary frame buffer */
-      	uiStatus =  Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
-	    if ( uiStatus != 0 ) {
-	       printf("Error: %d Acquisition_GetActFrame failed in OnEndFrameCallback!\n", uiStatus);
-	       Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-	       printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
-	       }
-		printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
-		pUsrArgs->pPerkinElmer->setIntegerParam(0, pUsrArgs->pPerkinElmer->getParamPE_ImageNumber(), ActBuffFrame);
-		pUsrArgs->pPerkinElmer->setIntegerParam(0, pUsrArgs->pPerkinElmer->getParamPE_FrameBufferIndex(), ActAcqFrame);
+          uiStatus =  Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
+        if ( uiStatus != 0 ) {
+           printf("Error: %d Acquisition_GetActFrame failed in OnEndFrameCallback!\n", uiStatus);
+           Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+           printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+           }
+        printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
+        pUsrArgs->pPerkinElmer->setIntegerParam(0, pUsrArgs->pPerkinElmer->getParamPE_ImageNumber(), ActBuffFrame);
+        pUsrArgs->pPerkinElmer->setIntegerParam(0, pUsrArgs->pPerkinElmer->getParamPE_FrameBufferIndex(), ActAcqFrame);
 
-  	    SizeX = pUsrArgs->uiColumns;
-	    SizeY = pUsrArgs->uiRows;
-		currBuff = (ActBuffFrame - 1)%pUsrArgs->numBufferFrames;
-	    buffOffset = SizeX * SizeY * currBuff;
+          SizeX = pUsrArgs->uiColumns;
+        SizeY = pUsrArgs->uiRows;
+        currBuff = (ActBuffFrame - 1)%pUsrArgs->numBufferFrames;
+        buffOffset = SizeX * SizeY * currBuff;
 
-		/** Correct for detector offset and gain as necessary */
-		if ((pUsrArgs->iUseOffset) && (pUsrArgs->pOffsetBuffer != NULL))
-		{
-			if ((pUsrArgs->iUseGain) && (pUsrArgs->pGainBuffer != NULL))
-				uiStatus = Acquisition_DoOffsetGainCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), &(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pOffsetBuffer, pUsrArgs->pGainBuffer, pUsrArgs->uiRows * pUsrArgs->uiColumns);
-			else
-				uiStatus = Acquisition_DoOffsetCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), &(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pOffsetBuffer, pUsrArgs->uiRows * pUsrArgs->uiColumns);
-		}
+        /** Correct for detector offset and gain as necessary */
+        if ((pUsrArgs->iUseOffset) && (pUsrArgs->pOffsetBuffer != NULL))
+        {
+            if ((pUsrArgs->iUseGain) && (pUsrArgs->pGainBuffer != NULL))
+                uiStatus = Acquisition_DoOffsetGainCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), &(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pOffsetBuffer, pUsrArgs->pGainBuffer, pUsrArgs->uiRows * pUsrArgs->uiColumns);
+            else
+                uiStatus = Acquisition_DoOffsetCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), &(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pOffsetBuffer, pUsrArgs->uiRows * pUsrArgs->uiColumns);
+        }
 
-		/** correct for dead pixels as necessary */
-		if ((pUsrArgs->iUsePixelCorrections) && (pUsrArgs->pPixelCorrectionList != NULL))
-			uiStatus = Acquisition_DoPixelCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pPixelCorrectionList);
+        /** correct for dead pixels as necessary */
+        if ((pUsrArgs->iUsePixelCorrections) && (pUsrArgs->pPixelCorrectionList != NULL))
+            uiStatus = Acquisition_DoPixelCorrection (&(pUsrArgs->pDataBuffer[buffOffset]), pUsrArgs->pPixelCorrectionList);
 
-		/** Call the routine that actually grabs the data */
-		pUsrArgs->pDataBuffer[buffOffset] = ActAcqFrame;
-		pUsrArgs->pDataBuffer[buffOffset+1] = ActBuffFrame;
-		pUsrArgs->pPerkinElmer->frameCallback (currBuff);
-	}
+        /** Call the routine that actually grabs the data */
+        pUsrArgs->pDataBuffer[buffOffset] = ActAcqFrame;
+        pUsrArgs->pDataBuffer[buffOffset+1] = ActBuffFrame;
+        pUsrArgs->pPerkinElmer->frameCallback (currBuff);
+    }
 
-	printf ("End Frame callback done!\n");
-
-
+    printf ("End Frame callback done!\n");
 }
 
 //_____________________________________________________________________________________________
@@ -114,58 +116,62 @@ DWORD 				HISError,
 /** callback function that is called by XISL at end of acquisition */
 void CALLBACK OnEndAcqCallback(HACQDESC hAcqDesc)
 {
-DWORD		dwValue;
-AcqData_t 	*pUsrArgs;
+void        *dwValue;
+AcqData_t     *pUsrArgs;
 unsigned int uiStatus;
 unsigned int    SizeX, SizeY;
 DWORD ActAcqFrame;
 DWORD ActBuffFrame;
 unsigned int currBuff;
 unsigned int buffOffset;
-DWORD 				HISError,
-					FGError;
+DWORD        HISError,
+             FGError;
 
-	printf ("End Acquire callback called...\n");
+    printf ("End Acquire callback called...\n");
 
-  	uiStatus = 	Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
-	if ( uiStatus != 0 ) {
-	   printf("Error: %d Acquisition_GetAcqData failed in OnEndFrameCallback!\n", uiStatus);
-	   Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-	   printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
-	   }
-	pUsrArgs = ((AcqData_t *) dwValue);
+#ifdef __X64
+    uiStatus =     Acquisition_GetAcqData(hAcqDesc, &dwValue);
+#else
+    uiStatus =     Acquisition_GetAcqData(hAcqDesc, (DWORD *) &dwValue);
+#endif
+    if ( uiStatus != 0 ) {
+       printf("Error: %d Acquisition_GetAcqData failed in OnEndFrameCallback!\n", uiStatus);
+       Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+       printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+       }
+    pUsrArgs = ((AcqData_t *) dwValue);
 
-	/** For normal acquisition mode, send out Arrays all at once once acquisition is over */
-	if ((pUsrArgs->iAcqMode == PE_ACQUIRE_ACQUISITION) && (pUsrArgs->iFastCollectMode) )
-	{
+    /** For normal acquisition mode, send out Arrays all at once once acquisition is over */
+    if ((pUsrArgs->iAcqMode == PE_ACQUIRE_ACQUISITION) && (pUsrArgs->iFastCollectMode) )
+    {
         /** find offset into secondary frame buffer */
-      	uiStatus =  Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
-	    if ( uiStatus != 0 ) {
-	       printf("Error: %d Acquisition_GetActFrame failed in OnEndFrameCallback!\n", uiStatus);
-	       Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-	       printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
-	       }
+          uiStatus =  Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
+        if ( uiStatus != 0 ) {
+           printf("Error: %d Acquisition_GetActFrame failed in OnEndFrameCallback!\n", uiStatus);
+           Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+           printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+           }
 
-  	    SizeX = pUsrArgs->uiColumns;
-	    SizeY = pUsrArgs->uiRows;
-		currBuff = (ActBuffFrame - 1)%pUsrArgs->numBufferFrames;
-	    buffOffset = SizeX * SizeY * ((ActBuffFrame - 1)%pUsrArgs->numBufferFrames);
-
-
-
-	}
-
-	/* raise a flag to the user if offset data is available */
-	if (pUsrArgs->iAcqMode == PE_ACQUIRE_OFFSET)
-		pUsrArgs->pPerkinElmer->offsetCallback ();
+          SizeX = pUsrArgs->uiColumns;
+        SizeY = pUsrArgs->uiRows;
+        currBuff = (ActBuffFrame - 1)%pUsrArgs->numBufferFrames;
+        buffOffset = SizeX * SizeY * ((ActBuffFrame - 1)%pUsrArgs->numBufferFrames);
 
 
-	/* raise a flag to the user if gain data is available */
-	if (pUsrArgs->iAcqMode == PE_ACQUIRE_GAIN)
-		pUsrArgs->pPerkinElmer->gainCallback ();
+
+    }
+
+    /* raise a flag to the user if offset data is available */
+    if (pUsrArgs->iAcqMode == PE_ACQUIRE_OFFSET)
+        pUsrArgs->pPerkinElmer->offsetCallback ();
 
 
-	printf ("End Acquire callback done!\n");
+    /* raise a flag to the user if gain data is available */
+    if (pUsrArgs->iAcqMode == PE_ACQUIRE_GAIN)
+        pUsrArgs->pPerkinElmer->gainCallback ();
+
+
+    printf ("End Acquire callback done!\n");
 }
 
 //_____________________________________________________________________________________________
@@ -184,15 +190,15 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
     int addr=0;
     int dims[2];
 
-	pAcqBuffer = NULL;
-	pOffsetBuffer = NULL;
-	pGainBuffer = NULL;
-	pBadPixelMap = NULL;
-	pPixelCorrectionList = NULL;
+    pAcqBuffer = NULL;
+    pOffsetBuffer = NULL;
+    pGainBuffer = NULL;
+    pBadPixelMap = NULL;
+    pPixelCorrectionList = NULL;
 
-	bAcquiringOffset = false;
-	bAcquiringGain = false;
-	abortAcq = 0;
+    bAcquiringOffset = false;
+    bAcquiringGain = false;
+    abortAcq = 0;
     /* Create the epicsEvents for signaling to the simulate task when acquisition starts and stops */
     this->startAcquisitionEventId = epicsEventCreate(epicsEventEmpty);
     if (!this->startAcquisitionEventId) {
@@ -293,16 +299,16 @@ PerkinElmer::PerkinElmer(const char *portName, int maxSizeX, int maxSizeY, NDDat
     status |= setStringParam (PE_PixelCorrectionFileRBV, "none");
     status |= setIntegerParam(PE_PixelCorrectionAvailable, NOT_AVAILABLE);
     status |= setStringParam (PE_CorrectionsDirectory, "none");
-	status |= setIntegerParam (PE_FastCollectMode, 0);
-	status |= setIntegerParam (PE_FrameBufferIndex, 0);
-	status |= setIntegerParam (PE_ImageNumber, 0);
-	status |= setIntegerParam (PE_SkipLeadingPulses, 0);
-	status |= setIntegerParam (PE_NumPulsesToSkip, 0);
+    status |= setIntegerParam (PE_FastCollectMode, 0);
+    status |= setIntegerParam (PE_FrameBufferIndex, 0);
+    status |= setIntegerParam (PE_ImageNumber, 0);
+    status |= setIntegerParam (PE_SkipLeadingPulses, 0);
+    status |= setIntegerParam (PE_NumPulsesToSkip, 0);
     if (status) {
         printf("%s: unable to set camera parameters\n", functionName);
         return;
     }
-	/* initialize internal variables uses to hold time delayed information.*/
+    /* initialize internal variables uses to hold time delayed information.*/
     status |= getDoubleParam(ADAcquireTime, &(this->acqTimeReq) );
     this->acqTimeAct = this->acqTimeReq;
     status |= getIntegerParam(ADTriggerMode, &(this->trigModeReq) );
@@ -331,14 +337,14 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
     int adstatus;
     int addr=0;
     int status = asynSuccess;
-    int	iDetectorStatus;
-	int retstat;
+    int    iDetectorStatus;
+    int retstat;
 
-	//If Status is Initializing--ignore user input!
+    //If Status is Initializing--ignore user input!
     status = getIntegerParam(addr, PE_StatusRBV, &iDetectorStatus);
          getIntegerParam(addr, ADStatus, &adstatus);
    if (iDetectorStatus != PE_STATUS_OK)
-    	return ((asynStatus) status);
+        return ((asynStatus) status);
 
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
      * status at the end, but that's OK */
@@ -380,22 +386,22 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
         if (!value && (adstatus != ADStatusIdle))
         {
             this->imagesRemaining = 0;
-			setIntegerParam(addr, ADAcquire, 0);
-           	setIntegerParam(addr, ADStatus, ADStatusIdle);
-		    callParamCallbacks(addr, addr);
- 			this->abortAcq = 1;
+            setIntegerParam(addr, ADAcquire, 0);
+               setIntegerParam(addr, ADStatus, ADStatusIdle);
+            callParamCallbacks(addr, addr);
+             this->abortAcq = 1;
           asynPrint(pasynUser, ASYN_TRACE_FLOW, "%s:%s: Idle!\n", driverName, functionName);
         }
-	}
-	else if ( (function == ADBinX) ||
-		(function == ADBinY) ||
-		(function == ADMinX) ||
-		(function == ADMinY) ||
-		(function == ADSizeX) ||
-		(function == ADSizeY) ||
-		(function == NDDataType) ) {
-	}
-	else if (function == ADImageMode) {
+    }
+    else if ( (function == ADBinX) ||
+        (function == ADBinY) ||
+        (function == ADMinX) ||
+        (function == ADMinY) ||
+        (function == ADSizeX) ||
+        (function == ADSizeY) ||
+        (function == NDDataType) ) {
+    }
+    else if (function == ADImageMode) {
         /* The image mode may have changed while we are acquiring,
          * set the images remaining appropriately. */
         switch (value) {
@@ -411,50 +417,50 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
             this->imagesRemaining = -1;
             break;
         }
-	}
+    }
     else if (function == PE_Initialize) {
-		if ( adstatus == ADStatusIdle ) {
-			initializeDetector ();
-		}
-	}
-    else if (function == PE_AcquireOffset) {
-		if ( adstatus == ADStatusIdle ) {
-			acquireOffsetImage ();
-		}
-	}
-    else if (function ==  PE_AcquireGain) {
-		if ( adstatus == ADStatusIdle ) {
-			acquireGainImage ();
-		}
-	}
-    else if (function == PE_Trigger) {
-		if ((uiPEResult = Acquisition_SetFrameSync(hAcqDesc))!=HIS_ALL_OK)
-			printf("Error: %d  Acquisition_SetFrameSync failed!\n", uiPEResult);
-	}
-
-	else if (function == ADTriggerMode) {
-        getIntegerParam(addr, ADStatus, &adstatus);
-		retstat |= getIntegerParam(addr, ADTriggerMode, &(this->trigModeReq) );
-		printf ("Setting Requested Trigger Mode: %d\n", this->trigModeReq);
-		retstat |= setIntegerParam(addr, ADTriggerMode, this->trigModeAct );
-		//if not running go ahead and set the trigger mode
         if ( adstatus == ADStatusIdle ) {
-			this->setTriggerMode();
-		}
-	}
-	else if (function == PE_SaveCorrectionFiles) {
-		saveCorrectionFiles ();
-	}
-	else if (function == PE_LoadCorrectionFiles) {
-		loadCorrectionFiles ();
-	}
+            initializeDetector ();
+        }
+    }
+    else if (function == PE_AcquireOffset) {
+        if ( adstatus == ADStatusIdle ) {
+            acquireOffsetImage ();
+        }
+    }
+    else if (function ==  PE_AcquireGain) {
+        if ( adstatus == ADStatusIdle ) {
+            acquireGainImage ();
+        }
+    }
+    else if (function == PE_Trigger) {
+        if ((uiPEResult = Acquisition_SetFrameSync(hAcqDesc))!=HIS_ALL_OK)
+            printf("Error: %d  Acquisition_SetFrameSync failed!\n", uiPEResult);
+    }
+
+    else if (function == ADTriggerMode) {
+        getIntegerParam(addr, ADStatus, &adstatus);
+        retstat |= getIntegerParam(addr, ADTriggerMode, &(this->trigModeReq) );
+        printf ("Setting Requested Trigger Mode: %d\n", this->trigModeReq);
+        retstat |= setIntegerParam(addr, ADTriggerMode, this->trigModeAct );
+        //if not running go ahead and set the trigger mode
+        if ( adstatus == ADStatusIdle ) {
+            this->setTriggerMode();
+        }
+    }
+    else if (function == PE_SaveCorrectionFiles) {
+        saveCorrectionFiles ();
+    }
+    else if (function == PE_LoadCorrectionFiles) {
+        loadCorrectionFiles ();
+    }
 
 
     else {
         /* If this parameter belongs to a base class call its method */
         if (function < PE_FIRST_PARAM) {
-			status = ADDriver::writeInt32(pasynUser, value);
-		}
+            status = ADDriver::writeInt32(pasynUser, value);
+        }
     }
 
     /* Do callbacks so higher layers see any changes */
@@ -491,22 +497,22 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     if (function == ADAcquireTime) {
         getIntegerParam(addr, ADStatus, &adstatus);
 
-		retstat |= getDoubleParam(addr, ADAcquireTime, &(this->acqTimeReq) );
-		printf ("Setting Requested Acquisition Time: %f\n", this->acqTimeReq);
-		retstat |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
-		// if the detector is idle then go ahead and set the value
+        retstat |= getDoubleParam(addr, ADAcquireTime, &(this->acqTimeReq) );
+        printf ("Setting Requested Acquisition Time: %f\n", this->acqTimeReq);
+        retstat |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
+        // if the detector is idle then go ahead and set the value
         if ( adstatus == ADStatusIdle ) {
-			this->setExposureTime();
-		}
+            this->setExposureTime();
+        }
 
-	}
+    }
     else if (function == ADGain) {
-	}
+    }
     else {
         /* If this parameter belongs to a base class call its method */
         if (function < PE_FIRST_PARAM) {
-			status = ADDriver::writeFloat64(pasynUser, value);
-		}
+            status = ADDriver::writeFloat64(pasynUser, value);
+        }
     }
 
     /* Do callbacks so higher layers see any changes */
@@ -588,43 +594,43 @@ int adstatus;
 int eventStatus;
 int addr=0;
 double pollTime = 0.01;
-	while (true)
-	{
+    while (true)
+    {
         status = epicsEventWait(this->startAcquisitionEventId);
 
         //If in continuous mode, the new image is requested from the callback of the previous image
         //so the new image will fail because the hardware hasn't "finished" the old image
-		eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
+        eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
         getIntegerParam(addr, ADStatus, &adstatus);
        if (adstatus == ADStatusAcquire) {
-			printf ("acquireTask: Starting Acquisition\n");
-			Acquisition_SetReady(hAcqDesc, 1);
-        	acquireImage ();
-	    }
-//		i=0;
-		while ( (adstatus == ADStatusAcquire) && (this->abortAcq != 1) ) {
-			eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
+            printf ("acquireTask: Starting Acquisition\n");
+            Acquisition_SetReady(hAcqDesc, 1);
+            acquireImage ();
+        }
+//        i=0;
+        while ( (adstatus == ADStatusAcquire) && (this->abortAcq != 1) ) {
+            eventStatus = epicsEventWaitWithTimeout(this->stopAcquisitionEventId, pollTime);
 
- 	       	getIntegerParam(addr, ADStatus, &adstatus);
-//			if ( (i%10) == 0 ) {
-//				printf ("Acquiring: adstatus = %d, this->abortAcq = %d\n", adstatus, this->abortAcq );
-//			}
-//			i++;
-		}
+                getIntegerParam(addr, ADStatus, &adstatus);
+//            if ( (i%10) == 0 ) {
+//                printf ("Acquiring: adstatus = %d, this->abortAcq = %d\n", adstatus, this->abortAcq );
+//            }
+//            i++;
+        }
 
-		if ( this->abortAcq == 1 ) {
-			printf ("acquireTask: Aborting Acquisition\n");
-			this->abortAcq = 0;
+        if ( this->abortAcq == 1 ) {
+            printf ("acquireTask: Aborting Acquisition\n");
+            this->abortAcq = 0;
 
- 	       	getIntegerParam(addr, ADStatus, &adstatus);
- 	        while (adstatus){
- 	           getIntegerParam(addr, ADStatus, &adstatus);
-			}
-	 	   Acquisition_Abort(this->hAcqDesc);
-		}
+                getIntegerParam(addr, ADStatus, &adstatus);
+             while (adstatus){
+                getIntegerParam(addr, ADStatus, &adstatus);
+            }
+            Acquisition_Abort(this->hAcqDesc);
+        }
 
 
-	}
+    }
 }
 
 //_____________________________________________________________________________________________
@@ -678,29 +684,29 @@ const char *functionName = "frameCallback";
     asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW,
          "%s:%s: calling imageData callback\n", driverName, functionName);
     doCallbacksGenericPointer(pImage, NDArrayData, addr);
-	this->lock();
-	/* See if acquisition is done */
+    this->lock();
+    /* See if acquisition is done */
     if (this->imagesRemaining > 0)
     {
-    	this->imagesRemaining--;
+        this->imagesRemaining--;
         asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s: %d images remaining.\n", driverName, functionName, imagesRemaining);
-	}
+    }
     if (this->imagesRemaining == 0)
     {
-		printf("Aborting!!!\n");
-		status |= setIntegerParam(addr, ADAcquire, 0);
-		status |= setIntegerParam(addr, ADStatus, ADStatusIdle);
-	    callParamCallbacks(addr, addr);
-		this->abortAcq = 1;
+        printf("Aborting!!!\n");
+        status |= setIntegerParam(addr, ADAcquire, 0);
+        status |= setIntegerParam(addr, ADStatus, ADStatusIdle);
+        callParamCallbacks(addr, addr);
+        this->abortAcq = 1;
 
-	}
+    }
     /* Call the callbacks to update any changes */
     callParamCallbacks(addr, addr);
 
     this->unlock();
-	if (abortAcq) {
-		epicsEventSignal(this->stopAcquisitionEventId);
-	}
+    if (abortAcq) {
+        epicsEventSignal(this->stopAcquisitionEventId);
+    }
 
 
 }
@@ -711,20 +717,20 @@ const char *functionName = "frameCallback";
     that this data is available */
 void PerkinElmer::offsetCallback()
 {
-int 	addr=0,
-		status;
+int     addr=0,
+        status;
 
-	printf ("Offset collection complete!\n");
+    printf ("Offset collection complete!\n");
 
-	if (pOffsetBuffer != NULL)
-	{
-	    status |= setIntegerParam(addr, PE_OffsetAvailable, AVAILABLE);
-		setIntegerParam(addr, PE_StatusRBV, PE_STATUS_OK);
-	    callParamCallbacks(addr, addr);
-	}
+    if (pOffsetBuffer != NULL)
+    {
+        status |= setIntegerParam(addr, PE_OffsetAvailable, AVAILABLE);
+        setIntegerParam(addr, PE_StatusRBV, PE_STATUS_OK);
+        callParamCallbacks(addr, addr);
+    }
 
 
-	bAcquiringOffset = false;
+    bAcquiringOffset = false;
 }
 
 //_____________________________________________________________________________________________
@@ -733,55 +739,55 @@ int 	addr=0,
     that this data is available */
 void PerkinElmer::gainCallback()
 {
-int 	addr=0,
-		status;
+int     addr=0,
+        status;
 
-	printf ("Gain collection complete!\n");
+    printf ("Gain collection complete!\n");
 
-	if (pGainBuffer != NULL)
-	{
-	    status |= setIntegerParam(addr, PE_GainAvailable, AVAILABLE);
-	    setIntegerParam(addr, PE_StatusRBV, PE_STATUS_OK);
-	    callParamCallbacks(addr, addr);
-	}
+    if (pGainBuffer != NULL)
+    {
+        status |= setIntegerParam(addr, PE_GainAvailable, AVAILABLE);
+        setIntegerParam(addr, PE_StatusRBV, PE_STATUS_OK);
+        callParamCallbacks(addr, addr);
+    }
 
-	bAcquiringGain = false;
+    bAcquiringGain = false;
 }
 
 //_____________________________________________________________________________________________
-	int PerkinElmer::getParamADNumImagesCounter() {
-			return this->ADNumImagesCounter;
-	}
+    int PerkinElmer::getParamADNumImagesCounter() {
+            return this->ADNumImagesCounter;
+    }
 //_____________________________________________________________________________________________
-	int PerkinElmer::getParamPE_ImageNumber() {
-		return this->PE_ImageNumber;
-	}
+    int PerkinElmer::getParamPE_ImageNumber() {
+        return this->PE_ImageNumber;
+    }
 
 //_____________________________________________________________________________________________
-	int PerkinElmer::getParamPE_FrameBufferIndex(){
-		return this->PE_FrameBufferIndex;
-	}
+    int PerkinElmer::getParamPE_FrameBufferIndex(){
+        return this->PE_FrameBufferIndex;
+    }
 
 //_____________________________________________________________________________________________
 
 PerkinElmer::~PerkinElmer()
 {
-	Acquisition_Close (hAcqDesc);
+    Acquisition_Close (hAcqDesc);
 
-	if (pAcqBuffer != NULL)
-		free (pAcqBuffer);
+    if (pAcqBuffer != NULL)
+        free (pAcqBuffer);
 
-	if (pOffsetBuffer != NULL)
-		free (pOffsetBuffer);
+    if (pOffsetBuffer != NULL)
+        free (pOffsetBuffer);
 
-	if (pGainBuffer != NULL)
-		free (pGainBuffer);
+    if (pGainBuffer != NULL)
+        free (pGainBuffer);
 
-	if (pBadPixelMap != NULL)
-		free (pBadPixelMap);
+    if (pBadPixelMap != NULL)
+        free (pBadPixelMap);
 
-	if (pPixelCorrectionList != NULL)
-		free (pPixelCorrectionList);
+    if (pPixelCorrectionList != NULL)
+        free (pPixelCorrectionList);
 }
 
 //_____________________________________________________________________________________________
@@ -799,21 +805,21 @@ int yOffset;
 //int frameBufferSize;
 int addr = 0;
 
-	/* Find which slot in the secondary buffer is active. */
-//	Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
-//	getIntegerParam(addr, PE_NumFrameBuffersRBV, &frameBufferSize);
-	bufferOffset = (maxSizeX*maxSizeY)*buffFrame;
-//	printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
-//	printf( "computeArray: buffFrame %d\n", buffFrame);
-	epicsType *pData = (epicsType *)this->pRaw->pData;
+    /* Find which slot in the secondary buffer is active. */
+//    Acquisition_GetActFrame(hAcqDesc, &ActAcqFrame, &ActBuffFrame);
+//    getIntegerParam(addr, PE_NumFrameBuffersRBV, &frameBufferSize);
+    bufferOffset = (maxSizeX*maxSizeY)*buffFrame;
+//    printf( "computeArray: ActAcqFrame = %d, ActBuffFrame = %d\n", ActAcqFrame, ActBuffFrame);
+//    printf( "computeArray: buffFrame %d\n", buffFrame);
+    epicsType *pData = (epicsType *)this->pRaw->pData;
 
 
-	for (int loopy=0; loopy<maxSizeY; loopy++) {
-		yOffset = (loopy*maxSizeX);
-		for (int loopx=0; loopx<maxSizeX; loopx++){
-			(*pData++) = (epicsType)pAcqBuffer[loopx + yOffset + bufferOffset];
-		}
-	}
+    for (int loopy=0; loopy<maxSizeY; loopy++) {
+        yOffset = (loopy*maxSizeX);
+        for (int loopx=0; loopx<maxSizeX; loopx++){
+            (*pData++) = (epicsType)pAcqBuffer[loopx + yOffset + bufferOffset];
+        }
+    }
 }
 
 //_____________________________________________________________________________________________
@@ -950,7 +956,7 @@ int PerkinElmer::computeImage(unsigned int buffFrame)
     /* We save the most recent image buffer so it can be used in the read() function.
      * Now release it before getting a new version. */
     if (this->pArrays[addr])
-    	this->pArrays[addr]->release();
+        this->pArrays[addr]->release();
     status = this->pNDArrayPool->convert(this->pRaw,
                                          &this->pArrays[addr],
                                          dataType,
@@ -969,7 +975,7 @@ int PerkinElmer::computeImage(unsigned int buffFrame)
     status |= setIntegerParam(addr, NDArraySizeX, pImage->dims[0].size);
     status |= setIntegerParam(addr, NDArraySizeY, pImage->dims[1].size);
     if (status)
-    	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: error setting parameters\n",
                     driverName, functionName);
 
@@ -983,37 +989,37 @@ void PerkinElmer::enumSensors (void)
 ACQDESCPOS Pos = 0;
 int iFrames;
 
-	bEnableIRQ =TRUE;
-	uiPEResult = Acquisition_EnumSensors(&uiNumSensors, bEnableIRQ, FALSE);
-	if (uiPEResult!=HIS_ALL_OK)
-		printf("Error: %d  EnumSensors failed!\n", uiPEResult);
+    bEnableIRQ =TRUE;
+    uiPEResult = Acquisition_EnumSensors(&uiNumSensors, bEnableIRQ, FALSE);
+    if (uiPEResult!=HIS_ALL_OK)
+        printf("Error: %d  EnumSensors failed!\n", uiPEResult);
 
-	printf("%d sensors recognized!\n", uiNumSensors);
+    printf("%d sensors recognized!\n", uiNumSensors);
 
-	//now we iterate through all this sensors and display sensor data
-	do
-	{
-		if ((uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc)) != HIS_ALL_OK)
-			printf("Error: %d  GetNextSensor failed!\n", uiPEResult);
+    //now we iterate through all this sensors and display sensor data
+    do
+    {
+        if ((uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc)) != HIS_ALL_OK)
+            printf("Error: %d  GetNextSensor failed!\n", uiPEResult);
 
-		//ask for communication device type and its number
-		if ((uiPEResult=Acquisition_GetCommChannel(hAcqDesc, &uiChannelType, &iChannelNum)) != HIS_ALL_OK)
-			printf("Error: %d  GetCommChannel failed!\n", uiPEResult);
+        //ask for communication device type and its number
+        if ((uiPEResult=Acquisition_GetCommChannel(hAcqDesc, &uiChannelType, &iChannelNum)) != HIS_ALL_OK)
+            printf("Error: %d  GetCommChannel failed!\n", uiPEResult);
 
-		//ask for data organization of all sensors
-		if ((uiPEResult=Acquisition_GetConfiguration(hAcqDesc, (unsigned int *) &iFrames, &uiRows, &uiColumns, &uiDataType,
-				&uiSortFlags, &bEnableIRQ, &dwAcqType, &dwSystemID, &dwSyncMode, &dwHwAccess)) != HIS_ALL_OK)
-			printf("Error: %d GetConfiguration failed!\n", uiPEResult);
+        //ask for data organization of all sensors
+        if ((uiPEResult=Acquisition_GetConfiguration(hAcqDesc, (unsigned int *) &iFrames, &uiRows, &uiColumns, &uiDataType,
+                &uiSortFlags, &bEnableIRQ, &dwAcqType, &dwSystemID, &dwSyncMode, &dwHwAccess)) != HIS_ALL_OK)
+            printf("Error: %d GetConfiguration failed!\n", uiPEResult);
 
-		if (uiChannelType==HIS_BOARD_TYPE_ELTEC_XRD_FGX)
-			printf("Channel Type: HIS_BOARD_TYPE_ELTEC_XRD_FGX\n");
-		if (uiChannelType==HIS_BOARD_TYPE_ELTEC)
-			printf("Channel Type: HIS_BOARD_TYPE_ELTEC\n");
-		printf("Channel Number: %d\n", iChannelNum);
-		printf("Frames: %d\n", iFrames);
-		printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
+        if (uiChannelType==HIS_BOARD_TYPE_ELTEC_XRD_FGX)
+            printf("Channel Type: HIS_BOARD_TYPE_ELTEC_XRD_FGX\n");
+        if (uiChannelType==HIS_BOARD_TYPE_ELTEC)
+            printf("Channel Type: HIS_BOARD_TYPE_ELTEC\n");
+        printf("Channel Number: %d\n", iChannelNum);
+        printf("Frames: %d\n", iFrames);
+        printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
 
-	} while (Pos!=0);
+    } while (Pos!=0);
 
 }
 
@@ -1025,325 +1031,328 @@ const char* functionName = "initializeDetector";
 ACQDESCPOS Pos = 0;
 WORD wBinning=1;
 int timings = 8;
-double 	m_pTimingsListBinning[8];
+double     m_pTimingsListBinning[8];
 /*double acqTime;*/
 int status = asynSuccess;
-int	iGain,
-	iTimeIndex,
-	iSyncMode,
-	error;
+int iGain,
+    iTimeIndex,
+    iSyncMode;
 int addr=0;
 int iFrames;
-DWORD 	dwDwellTime,
-		dwSyncTime;
+DWORD     dwDwellTime,
+        dwSyncTime;
 UINT devFrames, devRows, devColumns, devDataType, devSortFlags;
 BOOL devIrqEnabled;
 DWORD devAcqType, devSystemID, devSyncMode, devHwAccess;
 
-	printf("\n\nAttempting to initialize PE detector...\n");
+    printf("\n\nAttempting to initialize PE detector...\n");
 
-	//let the user know what's going on...
+    //let the user know what's going on...
     status |= setIntegerParam(addr, PE_StatusRBV, PE_STATUS_INITIALIZING);
     callParamCallbacks(addr, addr);
 
-	//get some information
+    //get some information
     status |= getIntegerParam(addr, PE_NumFrameBuffers, (int *) &uiNumFrameBuffers);
     status |= getIntegerParam(addr, PE_Gain, &iGain);
     status |= getIntegerParam(addr, PE_DwellTime, &iTimeIndex);
     status |= getIntegerParam(addr, PE_SyncTime, (int *) &dwSyncTime);
     //status |= getIntegerParam(addr, ADTriggerMode, &iSyncMode);
-	iSyncMode = this->trigModeReq;
+    iSyncMode = this->trigModeReq;
     if (status)
-    	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: error getting parameters\n",
                     driverName, functionName);
 
-	enumSensors ();
+    enumSensors ();
 
-	printf("***NOTE***  This driver will only control the first enumerated sensor!!!\n\n");
+    printf("***NOTE***  This driver will only control the first enumerated sensor!!!\n\n");
 
-	printf("Select first available sensor...\n");
+    printf("Select first available sensor...\n");
 
-	Pos = NULL;
-	if ((uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc)) != HIS_ALL_OK)
-	{
-		printf("Error: %d  GetNextSensor failed!\n", uiPEResult);
-		return (false);
-	}
+    Pos = NULL;
+    if ((uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc)) != HIS_ALL_OK)
+    {
+        printf("Error: %d  GetNextSensor failed!\n", uiPEResult);
+        return (false);
+    }
 
-	//ask for communication device type and its number
-	if ((uiPEResult=Acquisition_GetCommChannel(hAcqDesc, &uiChannelType, &iChannelNum)) != HIS_ALL_OK)
-	{
-		printf("Error: %d  GetCommChannel failed!\n", uiPEResult);
-		return (false);
-	}
+    //ask for communication device type and its number
+    if ((uiPEResult=Acquisition_GetCommChannel(hAcqDesc, &uiChannelType, &iChannelNum)) != HIS_ALL_OK)
+    {
+        printf("Error: %d  GetCommChannel failed!\n", uiPEResult);
+        return (false);
+    }
 
-	// now set callbacks and messages
-	if ((uiPEResult=Acquisition_SetCallbacksAndMessages(hAcqDesc, NULL, 0, 0, OnEndFrameCallback, OnEndAcqCallback)) != HIS_ALL_OK)
-	{
-		printf("Error: %d  SetCallbacksAndMessages failed!\n", uiPEResult);
-		return (false);
-	}
+    // now set callbacks and messages
+    if ((uiPEResult=Acquisition_SetCallbacksAndMessages(hAcqDesc, NULL, 0, 0, OnEndFrameCallback, OnEndAcqCallback)) != HIS_ALL_OK)
+    {
+        printf("Error: %d  SetCallbacksAndMessages failed!\n", uiPEResult);
+        return (false);
+    }
 
-	//  set detector gain
-	if ((uiPEResult = Acquisition_SetCameraGain(hAcqDesc, iGain))!=HIS_ALL_OK)
-	{
-		printf("Error: %d  SetCameraGain failed!\n", uiPEResult);
-		return (false);
-	}
+    //  set detector gain
+    if ((uiPEResult = Acquisition_SetCameraGain(hAcqDesc, iGain))!=HIS_ALL_OK)
+    {
+        printf("Error: %d  SetCameraGain failed!\n", uiPEResult);
+        return (false);
+    }
 
-	// set detector to default binning mode
-	if ((uiPEResult = Acquisition_SetCameraBinningMode(hAcqDesc,wBinning))!=HIS_ALL_OK)
-	{
-		printf("Error: %d  SetCameraBinningMode failed!\n", uiPEResult);
-		return (false);
-	}
+    // set detector to default binning mode
+    if ((uiPEResult = Acquisition_SetCameraBinningMode(hAcqDesc,wBinning))!=HIS_ALL_OK)
+    {
+        printf("Error: %d  SetCameraBinningMode failed!\n", uiPEResult);
+        return (false);
+    }
 
-	// get int times for selected binning mode
-	if ((uiPEResult = Acquisition_GetIntTimes(hAcqDesc, m_pTimingsListBinning, &timings))!=HIS_ALL_OK)
-	{
-		printf("Error: %d  GetIntTimes failed!\n", uiPEResult);
-		return (false);
-	}
+    // get int times for selected binning mode
+    if ((uiPEResult = Acquisition_GetIntTimes(hAcqDesc, m_pTimingsListBinning, &timings))!=HIS_ALL_OK)
+    {
+        printf("Error: %d  GetIntTimes failed!\n", uiPEResult);
+        return (false);
+    }
 
-	//  set detector timing mode
-	if ((uiPEResult = Acquisition_SetCameraMode(hAcqDesc, 0))!=HIS_ALL_OK)
-	{
-		printf("Error: %d  SetCameraMode failed!\n", uiPEResult);
-		return (false);
-	}
+    //  set detector timing mode
+    if ((uiPEResult = Acquisition_SetCameraMode(hAcqDesc, 0))!=HIS_ALL_OK)
+    {
+        printf("Error: %d  SetCameraMode failed!\n", uiPEResult);
+        return (false);
+    }
 
-	//set dwell time
-/**	switch (iSyncMode)
-/*	{
-/*		case PE_FREE_RUNNING : {
-/*			Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_FREE_RUNNING);
+    //set dwell time
+/**    switch (iSyncMode)
+/*    {
+/*        case PE_FREE_RUNNING : {
+/*            Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_FREE_RUNNING);
 /*
-/*			break;
-/*		}
+/*            break;
+/*        }
 /*
-/*		case PE_EXTERNAL_TRIGGER : {
-/*			Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_EXTERNAL_TRIGGER);
+/*        case PE_EXTERNAL_TRIGGER : {
+/*            Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_EXTERNAL_TRIGGER);
 /*
-/*			break;
-/*		}
+/*            break;
+/*        }
 /*
-/*		case PE_INTERNAL_TRIGGER : {
-/*			printf("Setting AcquireTime %f\n", this->acqTimeReq );
-/*			for (int loop=0;loop<timings;loop++)
-/*				printf ("m_pTimingsListBinning[%d] = %e\n", loop, m_pTimingsListBinning[loop]);
-/*			dwDwellTime = (DWORD) (this->acqTimeReq * 1000000);
-/*			printf ("internal timer requested: %d\n", dwDwellTime);
+/*        case PE_INTERNAL_TRIGGER : {
+/*            printf("Setting AcquireTime %f\n", this->acqTimeReq );
+/*            for (int loop=0;loop<timings;loop++)
+/*                printf ("m_pTimingsListBinning[%d] = %e\n", loop, m_pTimingsListBinning[loop]);
+/*            dwDwellTime = (DWORD) (this->acqTimeReq * 1000000);
+/*            printf ("internal timer requested: %d\n", dwDwellTime);
 /*
-/*			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_INTERNAL_TIMER);
-/*			error = Acquisition_SetTimerSync(hAcqDesc, &dwDwellTime);
+/*            error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_INTERNAL_TIMER);
+/*            error = Acquisition_SetTimerSync(hAcqDesc, &dwDwellTime);
 /*
 /*            this->acqTimeAct = dwDwellTime/1000000.;
-/*			printf ("internal timer set: %f\n", this->acqTimeAct);
+/*            printf ("internal timer set: %f\n", this->acqTimeAct);
 /*            setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
 /*
-/*			printf ("error: %d\n", error);
-/*			callParamCallbacks();
+/*            printf ("error: %d\n", error);
+/*            callParamCallbacks();
 /*
-/*			break;
-/*		}
+/*            break;
+/*        }
 /*
-/*		case PE_SOFT_TRIGGER : {
-/*			Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_SOFT_TRIGGER);
+/*        case PE_SOFT_TRIGGER : {
+/*            Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_SOFT_TRIGGER);
 /*
-/*			break;
-/*		}
+/*            break;
+/*        }
 /*
-/*	}
+/*    }
 */
 
-	this->setTriggerMode();
-	this->setExposureTime();
-	//ask for data organization of sensor
-	if ((uiPEResult=Acquisition_GetConfiguration(hAcqDesc, (unsigned int *) &iFrames, &uiRows, &uiColumns, &uiDataType,
-			&uiSortFlags, &bEnableIRQ, &dwAcqType, &dwSystemID, &dwSyncMode, &dwHwAccess)) != HIS_ALL_OK)
-		printf("Error: %d GetConfiguration failed!\n", uiPEResult);
+    this->setTriggerMode();
+    this->setExposureTime();
+    //ask for data organization of sensor
+    if ((uiPEResult=Acquisition_GetConfiguration(hAcqDesc, (unsigned int *) &iFrames, &uiRows, &uiColumns, &uiDataType,
+            &uiSortFlags, &bEnableIRQ, &dwAcqType, &dwSystemID, &dwSyncMode, &dwHwAccess)) != HIS_ALL_OK)
+        printf("Error: %d GetConfiguration failed!\n", uiPEResult);
 
-	if (uiChannelType==HIS_BOARD_TYPE_ELTEC_XRD_FGX)
-		printf("Channel Type: HIS_BOARD_TYPE_ELTEC_XRD_FGX\n");
-	if (uiChannelType==HIS_BOARD_TYPE_ELTEC)
-		printf("Channel Type: HIS_BOARD_TYPE_ELTEC\n");
-	printf ("System ID: %d\n", dwSystemID);
+    if (uiChannelType==HIS_BOARD_TYPE_ELTEC_XRD_FGX)
+        printf("Channel Type: HIS_BOARD_TYPE_ELTEC_XRD_FGX\n");
+    if (uiChannelType==HIS_BOARD_TYPE_ELTEC)
+        printf("Channel Type: HIS_BOARD_TYPE_ELTEC\n");
+    printf ("System ID: %d\n", dwSystemID);
 
-	//allocate frame memory
-	if ((uiNumFrameBuffers <= 0) || (uiNumFrameBuffers > 500))
-	{
-		uiNumFrameBuffers = 500;
-		status = setIntegerParam(addr, PE_NumFrameBuffers, uiNumFrameBuffers);
-	}
-	if (pAcqBuffer != NULL)
-		free (pAcqBuffer);
-	pAcqBuffer = (unsigned short *) malloc(uiNumFrameBuffers*uiRows*uiColumns*sizeof(short));
-	if (pAcqBuffer == NULL)
-	{
-		printf("Error:  Memory allocation failed for %d frames!\n", uiNumFrameBuffers);
-		return (false);
-	}
-	printf("\nChannel Number: %d\n", iChannelNum);
-	printf("Memory for %d frames allocated...\n", uiNumFrameBuffers);
-	printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
+    //allocate frame memory
+    if ((uiNumFrameBuffers <= 0) || (uiNumFrameBuffers > 500))
+    {
+        uiNumFrameBuffers = 500;
+        status = setIntegerParam(addr, PE_NumFrameBuffers, uiNumFrameBuffers);
+    }
+    if (pAcqBuffer != NULL)
+        free (pAcqBuffer);
+    pAcqBuffer = (unsigned short *) malloc(uiNumFrameBuffers*uiRows*uiColumns*sizeof(short));
+    if (pAcqBuffer == NULL)
+    {
+        printf("Error:  Memory allocation failed for %d frames!\n", uiNumFrameBuffers);
+        return (false);
+    }
+    printf("\nChannel Number: %d\n", iChannelNum);
+    printf("Memory for %d frames allocated...\n", uiNumFrameBuffers);
+    printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
 
-	printf("Detector Configuration\n");
+    printf("Detector Configuration\n");
 
-	Acquisition_GetConfiguration( hAcqDesc, &devFrames, &devRows, &devColumns, &devDataType,
-									&devSortFlags, &devIrqEnabled, &devAcqType, &devSystemID, &devSyncMode,
-									&devHwAccess);
+    Acquisition_GetConfiguration( hAcqDesc, &devFrames, &devRows, &devColumns, &devDataType,
+                                    &devSortFlags, &devIrqEnabled, &devAcqType, &devSystemID, &devSyncMode,
+                                    &devHwAccess);
 
-	printf("     Number of frames: %d\n", devFrames);
-	printf("     Number of Rows: %d, Number of Columns: %d\n", devRows, devColumns);
-	printf("     Data type: %d\n", devDataType);
-	printf("     Sort Flags %d\n", devSortFlags);
-	printf("     IRQ Enabled %d\n", devIrqEnabled);
-	printf("     Acquisition Type %d\n", devAcqType);
-	printf("     SystemID %d\n", devSystemID);
-	printf("     Sync Mode %d\n", devSyncMode);
-	printf("     HW Access %d\n", devHwAccess);
+    printf("     Number of frames: %d\n", devFrames);
+    printf("     Number of Rows: %d, Number of Columns: %d\n", devRows, devColumns);
+    printf("     Data type: %d\n", devDataType);
+    printf("     Sort Flags %d\n", devSortFlags);
+    printf("     IRQ Enabled %d\n", devIrqEnabled);
+    printf("     Acquisition Type %d\n", devAcqType);
+    printf("     SystemID %d\n", devSystemID);
+    printf("     Sync Mode %d\n", devSyncMode);
+    printf("     HW Access %d\n", devHwAccess);
 
-	//Update readback values
-	//let the user know what's going on...
-	status = 0;
+    //Update readback values
+    //let the user know what's going on...
+    status = 0;
     status |= setIntegerParam(addr, PE_SystemID, dwSystemID);
     status |= setIntegerParam(addr, PE_StatusRBV, PE_STATUS_OK);
-	status |= setIntegerParam(addr, PE_GainRBV, iGain);
-	status |= setIntegerParam(addr, PE_DwellTimeRBV, iTimeIndex);
-	status |= setIntegerParam(addr, PE_NumFrameBuffersRBV, uiNumFrameBuffers);
+    status |= setIntegerParam(addr, PE_GainRBV, iGain);
+    status |= setIntegerParam(addr, PE_DwellTimeRBV, iTimeIndex);
+    status |= setIntegerParam(addr, PE_NumFrameBuffersRBV, uiNumFrameBuffers);
 //    status |= setIntegerParam(addr, ADTriggerMode, iSyncMode);
 //    status |= setIntegerParam(addr, PE_SyncTimeRBV, dwDwellTime);
 
-	return (true);
+    return (true);
 }
 
 //_____________________________________________________________________________________________
 
 void PerkinElmer::acquireImage (void)
 {
-const char* 		functionName = "acquireImage";
-HANDLE 				hevEndAcq=NULL;
-int 				iMode,
-					iFrames,
-					iUseOffset,
-					iUseGain,
-					iUsePixelCorrection,
-					iFastCollectMode,
-					addr=0,
-					numImages = 0;
-int 				status = asynSuccess;
-DWORD 				HISError,
-					FGError;
+const char*         functionName = "acquireImage";
+HANDLE                 hevEndAcq=NULL;
+int                 iMode,
+                    iFrames,
+                    iUseOffset,
+                    iUseGain,
+                    iUsePixelCorrection,
+                    iFastCollectMode,
+                    addr=0,
+                    numImages = 0;
+int                 status = asynSuccess;
+DWORD                 HISError,
+                    FGError;
 int numLeadingImagesToSkip = 0;
 int skipLeadingImages;
 
-	//get some information
-   	status |= getIntegerParam(addr, ADImageMode, &iMode);
-   	status |= getIntegerParam(addr, PE_UseOffset, &iUseOffset);
-   	status |= getIntegerParam(addr, PE_UseGain, &iUseGain);
-   	status |= getIntegerParam(addr, PE_UsePixelCorrection, &iUsePixelCorrection);
-   	status |= getIntegerParam(addr, PE_FastCollectMode, &iFastCollectMode);
-   	status |= getIntegerParam(addr, PE_SkipLeadingPulses, &skipLeadingImages);
+    //get some information
+       status |= getIntegerParam(addr, ADImageMode, &iMode);
+       status |= getIntegerParam(addr, PE_UseOffset, &iUseOffset);
+       status |= getIntegerParam(addr, PE_UseGain, &iUseGain);
+       status |= getIntegerParam(addr, PE_UsePixelCorrection, &iUsePixelCorrection);
+       status |= getIntegerParam(addr, PE_FastCollectMode, &iFastCollectMode);
+       status |= getIntegerParam(addr, PE_SkipLeadingPulses, &skipLeadingImages);
 
-   	if (status)
-   		asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-   	                "%s:%s: error getting parameters\n",
-   	                driverName, functionName);
+       if (status)
+           asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                       "%s:%s: error getting parameters\n",
+                       driverName, functionName);
 
 
-	printf("Frame mode: %d\n", iMode);
+    printf("Frame mode: %d\n", iMode);
 
-	if (skipLeadingImages !=0 ) {
-	   	status |= getIntegerParam(addr, PE_NumPulsesToSkip, &numLeadingImagesToSkip);
+    if (skipLeadingImages !=0 ) {
+           status |= getIntegerParam(addr, PE_NumPulsesToSkip, &numLeadingImagesToSkip);
 
-		printf("Skipping Leading %d images\n", numLeadingImagesToSkip );
-	}
+        printf("Skipping Leading %d images\n", numLeadingImagesToSkip );
+    }
 
 
     switch(iMode)
     {
-    	case ADImageSingle:	iFrames = 1; break;
+        case ADImageSingle:    iFrames = 1; break;
         case ADImageMultiple: {
-		    status = getIntegerParam(addr, PE_NumFrameBuffers, (int *) &uiNumFrameBuffers);
- 		   	if ( numImages > (uiNumFrameBuffers - numLeadingImagesToSkip)) {
-			    iFrames = uiNumFrameBuffers;
-			}
-			else {
-			    iFrames = numImages;
-			}
-		}
+            status = getIntegerParam(addr, PE_NumFrameBuffers, (int *) &uiNumFrameBuffers);
+                if ( numImages > (uiNumFrameBuffers - numLeadingImagesToSkip)) {
+                iFrames = uiNumFrameBuffers;
+            }
+            else {
+                iFrames = numImages;
+            }
+        }
         case ADImageContinuous: {
-		    status = getIntegerParam(addr, PE_NumFrameBuffers, (int *) &uiNumFrameBuffers);
-			iFrames = uiNumFrameBuffers;
-			break;
-		}
+            status = getIntegerParam(addr, PE_NumFrameBuffers, (int *) &uiNumFrameBuffers);
+            iFrames = uiNumFrameBuffers;
+            break;
+        }
     }
 
-	printf("Frames: %d\n", iFrames);
-	printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
+    printf("Frames: %d\n", iFrames);
+    printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
 
-	dataAcqStruct.pDataBuffer = pAcqBuffer;
-	dataAcqStruct.pOffsetBuffer = pOffsetBuffer;
-	dataAcqStruct.pGainBuffer = pGainBuffer;
-	dataAcqStruct.pPixelCorrectionList = pPixelCorrectionList;
-	dataAcqStruct.iAcqMode = PE_ACQUIRE_ACQUISITION;
-	dataAcqStruct.uiRows = uiRows;
-	dataAcqStruct.uiColumns = uiColumns;
-	dataAcqStruct.iUseOffset = iUseOffset;
-	dataAcqStruct.iUseGain = iUseGain;
-	dataAcqStruct.iUsePixelCorrections = iUsePixelCorrection;
-	dataAcqStruct.pPerkinElmer = this;
-	dataAcqStruct.numBufferFrames = iFrames;
-	dataAcqStruct.iFastCollectMode = iFastCollectMode;
-	printf( "FastCollectMode %d\n", iFastCollectMode);
+    dataAcqStruct.pDataBuffer = pAcqBuffer;
+    dataAcqStruct.pOffsetBuffer = pOffsetBuffer;
+    dataAcqStruct.pGainBuffer = pGainBuffer;
+    dataAcqStruct.pPixelCorrectionList = pPixelCorrectionList;
+    dataAcqStruct.iAcqMode = PE_ACQUIRE_ACQUISITION;
+    dataAcqStruct.uiRows = uiRows;
+    dataAcqStruct.uiColumns = uiColumns;
+    dataAcqStruct.iUseOffset = iUseOffset;
+    dataAcqStruct.iUseGain = iUseGain;
+    dataAcqStruct.iUsePixelCorrections = iUsePixelCorrection;
+    dataAcqStruct.pPerkinElmer = this;
+    dataAcqStruct.numBufferFrames = iFrames;
+    dataAcqStruct.iFastCollectMode = iFastCollectMode;
+    printf( "FastCollectMode %d\n", iFastCollectMode);
 
-	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
-	if ((uiPEResult=Acquisition_DefineDestBuffers(hAcqDesc, pAcqBuffer,	iFrames, uiRows, uiColumns))!=HIS_ALL_OK)
-		printf("Error : %d  Acquisition_DefineDestBuffers failed!\n", uiPEResult);
+#ifdef __X64
+    Acquisition_SetAcqData(hAcqDesc, (void *) &dataAcqStruct);
+#else
+    Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
+#endif
+    if ((uiPEResult=Acquisition_DefineDestBuffers(hAcqDesc, pAcqBuffer,    iFrames, uiRows, uiColumns))!=HIS_ALL_OK)
+        printf("Error : %d  Acquisition_DefineDestBuffers failed!\n", uiPEResult);
 
-	setIntegerParam(addr, ADNumImagesCounter, 0);
-	Acquisition_ResetFrameCnt(hAcqDesc);
-	Acquisition_SetReady(hAcqDesc, 1);
-	switch (iMode) {
-		case ADImageSingle:
-	 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames+numLeadingImagesToSkip,numLeadingImagesToSkip,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
-		{
-			printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
-			Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-			printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
-		}
+    setIntegerParam(addr, ADNumImagesCounter, 0);
+    Acquisition_ResetFrameCnt(hAcqDesc);
+    Acquisition_SetReady(hAcqDesc, 1);
+    switch (iMode) {
+        case ADImageSingle:
+         if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames+numLeadingImagesToSkip,numLeadingImagesToSkip,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
+        {
+            printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
+            Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+            printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+        }
         break;
-    	case ADImageMultiple:
-		getIntegerParam(addr, ADNumImages, &numImages);
-    	if ( numImages > (uiNumFrameBuffers-1)) {
-		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,numLeadingImagesToSkip,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
-			{
-				printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
-				Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-				printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
-			}
-		}
-		else {
-		 	if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames+numLeadingImagesToSkip,numLeadingImagesToSkip,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
-			{
-				printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
-				Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-				printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
-			}
-		}
-		break;
-		case ADImageContinuous:
-		if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,numLeadingImagesToSkip,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
-		{
-			printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
-			Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
-			printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
-		}
-		break;
-	}
+        case ADImageMultiple:
+        getIntegerParam(addr, ADNumImages, &numImages);
+        if ( numImages > (uiNumFrameBuffers-1)) {
+             if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,numLeadingImagesToSkip,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
+            {
+                printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
+                Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+                printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+            }
+        }
+        else {
+             if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames+numLeadingImagesToSkip,numLeadingImagesToSkip,HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL))!=HIS_ALL_OK)
+            {
+                printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
+                Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+                printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+            }
+        }
+        break;
+        case ADImageContinuous:
+        if((uiPEResult=Acquisition_Acquire_Image(hAcqDesc,iFrames,numLeadingImagesToSkip,HIS_SEQ_CONTINUOUS, NULL, NULL, NULL))!=HIS_ALL_OK)
+        {
+            printf("Error: %d Acquisition_Acquire_Image failed!\n", uiPEResult);
+            Acquisition_GetErrorCode(hAcqDesc,&HISError,&FGError);
+            printf ("HIS Error: %d, Frame Grabber Error: %d\n", HISError, FGError);
+        }
+        break;
+    }
 
-	printf ("Acquisition started...\n");
+    printf ("Acquisition started...\n");
 
 }
 
@@ -1351,55 +1360,59 @@ int skipLeadingImages;
 
 void PerkinElmer::acquireOffsetImage (void)
 {
-const char* 		functionName = "acquireOffsetImage";
-HANDLE 				hevEndAcq=NULL;
-int					iFrames,
-					addr=0;
+const char*         functionName = "acquireOffsetImage";
+HANDLE                 hevEndAcq=NULL;
+int                    iFrames,
+                    addr=0;
 int status = asynSuccess;
 
     status = getIntegerParam(addr, PE_NumOffsetFrames, &iFrames);
     if (status)
-    	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: error getting parameters\n",
                     driverName, functionName);
 
-	printf("acquireOffsetImage...\n");
-	printf("Frames: %d\n", iFrames);
-	printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
+    printf("acquireOffsetImage...\n");
+    printf("Frames: %d\n", iFrames);
+    printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
 
-	if (pOffsetBuffer != NULL)
-		free (pOffsetBuffer);
-	pOffsetBuffer = (unsigned short *) malloc(sizeof(unsigned short)*uiRows*uiColumns);
-	if (pOffsetBuffer == NULL)
-	{
-		printf("Error:  Memory allocation failed for offset buffer!\n");
-		return;
-	}
-	printf("Memory for offset buffer (%dx%d) allocated...\n", uiRows, uiColumns);
-	memset (pOffsetBuffer, 0, sizeof(unsigned short)*uiRows*uiColumns);
+    if (pOffsetBuffer != NULL)
+        free (pOffsetBuffer);
+    pOffsetBuffer = (unsigned short *) malloc(sizeof(unsigned short)*uiRows*uiColumns);
+    if (pOffsetBuffer == NULL)
+    {
+        printf("Error:  Memory allocation failed for offset buffer!\n");
+        return;
+    }
+    printf("Memory for offset buffer (%dx%d) allocated...\n", uiRows, uiColumns);
+    memset (pOffsetBuffer, 0, sizeof(unsigned short)*uiRows*uiColumns);
 
-	dataAcqStruct.pDataBuffer = pAcqBuffer;
-	dataAcqStruct.pOffsetBuffer = pOffsetBuffer;
-	dataAcqStruct.pGainBuffer = pGainBuffer;
-	dataAcqStruct.pPixelCorrectionList = pPixelCorrectionList;
-	dataAcqStruct.iAcqMode = PE_ACQUIRE_OFFSET;
-	dataAcqStruct.uiRows = uiRows;
-	dataAcqStruct.uiColumns = uiColumns;
-	dataAcqStruct.iUseOffset = 0;
-	dataAcqStruct.iUseGain = 0;
-	dataAcqStruct.iUsePixelCorrections = 0;
-	dataAcqStruct.pPerkinElmer = this;
-	dataAcqStruct.numBufferFrames = 1;
-	dataAcqStruct.iFastCollectMode = 0;
+    dataAcqStruct.pDataBuffer = pAcqBuffer;
+    dataAcqStruct.pOffsetBuffer = pOffsetBuffer;
+    dataAcqStruct.pGainBuffer = pGainBuffer;
+    dataAcqStruct.pPixelCorrectionList = pPixelCorrectionList;
+    dataAcqStruct.iAcqMode = PE_ACQUIRE_OFFSET;
+    dataAcqStruct.uiRows = uiRows;
+    dataAcqStruct.uiColumns = uiColumns;
+    dataAcqStruct.iUseOffset = 0;
+    dataAcqStruct.iUseGain = 0;
+    dataAcqStruct.iUsePixelCorrections = 0;
+    dataAcqStruct.pPerkinElmer = this;
+    dataAcqStruct.numBufferFrames = 1;
+    dataAcqStruct.iFastCollectMode = 0;
 
-	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
+#ifdef __X64
+    Acquisition_SetAcqData(hAcqDesc, (void *) &dataAcqStruct);
+#else
+    Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
+#endif
 
-	if((uiPEResult=Acquisition_Acquire_OffsetImage(hAcqDesc,pOffsetBuffer,uiRows,uiColumns,iFrames))!=HIS_ALL_OK)
-		printf("Error: %d Acquisition_Acquire_OffsetImage failed!\n", uiPEResult);
+    if((uiPEResult=Acquisition_Acquire_OffsetImage(hAcqDesc,pOffsetBuffer,uiRows,uiColumns,iFrames))!=HIS_ALL_OK)
+        printf("Error: %d Acquisition_Acquire_OffsetImage failed!\n", uiPEResult);
 
-	bAcquiringOffset = true;
+    bAcquiringOffset = true;
 
-	printf ("Offset acquisition started...\n");
+    printf ("Offset acquisition started...\n");
 
 }
 
@@ -1407,55 +1420,59 @@ int status = asynSuccess;
 
 void PerkinElmer::acquireGainImage (void)
 {
-const char* 		functionName = "acquireGainImage";
-HANDLE 				hevEndAcq=NULL;
-int					iFrames,
-					addr=0;
+const char*         functionName = "acquireGainImage";
+HANDLE                 hevEndAcq=NULL;
+int                    iFrames,
+                    addr=0;
 int status = asynSuccess;
 
     status = getIntegerParam(addr, PE_NumGainFrames, &iFrames);
     if (status)
-    	asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: error getting parameters\n",
                     driverName, functionName);
 
-	printf("acquireGainImage...\n");
-	printf("Frames: %d\n", iFrames);
-	printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
+    printf("acquireGainImage...\n");
+    printf("Frames: %d\n", iFrames);
+    printf("Rows: %d, Columns: %d\n\n", uiRows, uiColumns);
 
-	if (pGainBuffer != NULL)
-		free (pGainBuffer);
-	pGainBuffer = (DWORD *) malloc(uiRows*uiColumns*sizeof(DWORD));
-	if (pGainBuffer == NULL)
-	{
-		printf("Error:  Memory allocation failed for gain buffer!\n");
-		return;
-	}
+    if (pGainBuffer != NULL)
+        free (pGainBuffer);
+    pGainBuffer = (DWORD *) malloc(uiRows*uiColumns*sizeof(DWORD));
+    if (pGainBuffer == NULL)
+    {
+        printf("Error:  Memory allocation failed for gain buffer!\n");
+        return;
+    }
 
-	printf("Memory for gain buffer (%dx%d) allocated...\n", uiRows, uiColumns);
+    printf("Memory for gain buffer (%dx%d) allocated...\n", uiRows, uiColumns);
 
-	dataAcqStruct.pDataBuffer = pAcqBuffer;
-	dataAcqStruct.pOffsetBuffer = pOffsetBuffer;
-	dataAcqStruct.pGainBuffer = pGainBuffer;
-	dataAcqStruct.pPixelCorrectionList = pPixelCorrectionList;
-	dataAcqStruct.iAcqMode = PE_ACQUIRE_GAIN;
-	dataAcqStruct.uiRows = uiRows;
-	dataAcqStruct.uiColumns = uiColumns;
-	dataAcqStruct.iUseOffset = 0;
-	dataAcqStruct.iUseGain = 0;
-	dataAcqStruct.iUsePixelCorrections = 0;
-	dataAcqStruct.pPerkinElmer = this;
-	dataAcqStruct.numBufferFrames = 1;
-	dataAcqStruct.iFastCollectMode = 0;
+    dataAcqStruct.pDataBuffer = pAcqBuffer;
+    dataAcqStruct.pOffsetBuffer = pOffsetBuffer;
+    dataAcqStruct.pGainBuffer = pGainBuffer;
+    dataAcqStruct.pPixelCorrectionList = pPixelCorrectionList;
+    dataAcqStruct.iAcqMode = PE_ACQUIRE_GAIN;
+    dataAcqStruct.uiRows = uiRows;
+    dataAcqStruct.uiColumns = uiColumns;
+    dataAcqStruct.iUseOffset = 0;
+    dataAcqStruct.iUseGain = 0;
+    dataAcqStruct.iUsePixelCorrections = 0;
+    dataAcqStruct.pPerkinElmer = this;
+    dataAcqStruct.numBufferFrames = 1;
+    dataAcqStruct.iFastCollectMode = 0;
 
-	Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
+#ifdef __X64
+    Acquisition_SetAcqData(hAcqDesc, (void *) &dataAcqStruct);
+#else
+    Acquisition_SetAcqData(hAcqDesc, (DWORD) &dataAcqStruct);
+#endif
 
-	if((uiPEResult=Acquisition_Acquire_GainImage(hAcqDesc,pOffsetBuffer,pGainBuffer,uiRows,uiColumns,iFrames))!=HIS_ALL_OK)
-		printf("Error: %d Acquisition_Acquire_GainImage failed!\n", uiPEResult);
+    if((uiPEResult=Acquisition_Acquire_GainImage(hAcqDesc,pOffsetBuffer,pGainBuffer,uiRows,uiColumns,iFrames))!=HIS_ALL_OK)
+        printf("Error: %d Acquisition_Acquire_GainImage failed!\n", uiPEResult);
 
-	bAcquiringGain = true;
+    bAcquiringGain = true;
 
-	printf ("Gain acquisition started...\n");
+    printf ("Gain acquisition started...\n");
 
 }
 
@@ -1463,313 +1480,313 @@ int status = asynSuccess;
 
 void PerkinElmer::saveCorrectionFiles (void)
 {
-int 				iGainIndex,
-					iTimeIndex,
-					iSizeX,
-					iSizeY,
-					iByteDepth,
-					addr=0,
-					status = asynSuccess;
-char				cpCorrectionsDirectory[256],
-					cpFileName[256],
-					cpGain[10],
-					cpTime[10];
-FILE				*pOutputFile;
+int                 iGainIndex,
+                    iTimeIndex,
+                    iSizeX,
+                    iSizeY,
+                    iByteDepth,
+                    addr=0,
+                    status = asynSuccess;
+char                cpCorrectionsDirectory[256],
+                    cpFileName[256],
+                    cpGain[10],
+                    cpTime[10];
+FILE                *pOutputFile;
 
-	printf ("Trying to save correction files...\n");
+    printf ("Trying to save correction files...\n");
 
-	status |= getStringParam(PE_CorrectionsDirectory, sizeof(cpCorrectionsDirectory), cpCorrectionsDirectory);
-	status |= getIntegerParam(addr, PE_GainRBV, &iGainIndex);
-	status |= getIntegerParam(addr, PE_DwellTimeRBV, &iTimeIndex);
+    status |= getStringParam(PE_CorrectionsDirectory, sizeof(cpCorrectionsDirectory), cpCorrectionsDirectory);
+    status |= getIntegerParam(addr, PE_GainRBV, &iGainIndex);
+    status |= getIntegerParam(addr, PE_DwellTimeRBV, &iTimeIndex);
     status |= getIntegerParam(addr, NDArraySizeX, &iSizeX);
     status |= getIntegerParam(addr, NDArraySizeY, &iSizeY);
 
-	printf ("Saving corrections to path: %s!\n", cpCorrectionsDirectory);
+    printf ("Saving corrections to path: %s!\n", cpCorrectionsDirectory);
 
-	switch (iTimeIndex)
-	{
-		case TIME0 : sprintf (cpTime, "%s", TIME0_STR); break;
-		case TIME1 : sprintf (cpTime, "%s", TIME1_STR); break;
-		case TIME2 : sprintf (cpTime, "%s", TIME2_STR); break;
-		case TIME3 : sprintf (cpTime, "%s", TIME3_STR); break;
-		case TIME4 : sprintf (cpTime, "%s", TIME4_STR); break;
-		case TIME5 : sprintf (cpTime, "%s", TIME5_STR); break;
-		case TIME6 : sprintf (cpTime, "%s", TIME6_STR); break;
-		case TIME7 : sprintf (cpTime, "%s", TIME7_STR); break;
-	}
+    switch (iTimeIndex)
+    {
+        case TIME0 : sprintf (cpTime, "%s", TIME0_STR); break;
+        case TIME1 : sprintf (cpTime, "%s", TIME1_STR); break;
+        case TIME2 : sprintf (cpTime, "%s", TIME2_STR); break;
+        case TIME3 : sprintf (cpTime, "%s", TIME3_STR); break;
+        case TIME4 : sprintf (cpTime, "%s", TIME4_STR); break;
+        case TIME5 : sprintf (cpTime, "%s", TIME5_STR); break;
+        case TIME6 : sprintf (cpTime, "%s", TIME6_STR); break;
+        case TIME7 : sprintf (cpTime, "%s", TIME7_STR); break;
+    }
 
-	switch (iGainIndex)
-	{
-		case GAIN0 : sprintf (cpGain, "%s", GAIN0_STR); break;
-		case GAIN1 : sprintf (cpGain, "%s", GAIN1_STR); break;
-		case GAIN2 : sprintf (cpGain, "%s", GAIN2_STR); break;
-		case GAIN3 : sprintf (cpGain, "%s", GAIN3_STR); break;
-		case GAIN4 : sprintf (cpGain, "%s", GAIN4_STR); break;
-		case GAIN5 : sprintf (cpGain, "%s", GAIN5_STR); break;
-	}
+    switch (iGainIndex)
+    {
+        case GAIN0 : sprintf (cpGain, "%s", GAIN0_STR); break;
+        case GAIN1 : sprintf (cpGain, "%s", GAIN1_STR); break;
+        case GAIN2 : sprintf (cpGain, "%s", GAIN2_STR); break;
+        case GAIN3 : sprintf (cpGain, "%s", GAIN3_STR); break;
+        case GAIN4 : sprintf (cpGain, "%s", GAIN4_STR); break;
+        case GAIN5 : sprintf (cpGain, "%s", GAIN5_STR); break;
+    }
 
-	//Save offset buffer
-	if (pOffsetBuffer != NULL)
-	{
-		sprintf (cpFileName, "%sOffset_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
-		printf ("Offset file name: %s\n", cpFileName);
+    //Save offset buffer
+    if (pOffsetBuffer != NULL)
+    {
+        sprintf (cpFileName, "%sOffset_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
+        printf ("Offset file name: %s\n", cpFileName);
 
-		pOutputFile = fopen (cpFileName, "wb");
+        pOutputFile = fopen (cpFileName, "wb");
 
-		if (pOutputFile != NULL)
-		{
-			iByteDepth = sizeof (unsigned short);
+        if (pOutputFile != NULL)
+        {
+            iByteDepth = sizeof (unsigned short);
 
-			fwrite ((void *) &iSizeX, sizeof (int), 1, pOutputFile);
-			if (ferror (pOutputFile))
-			{
-				printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fwrite ((void *) &iSizeX, sizeof (int), 1, pOutputFile);
+            if (ferror (pOutputFile))
+            {
+                printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fwrite ((void *) &iSizeY, sizeof (int), 1, pOutputFile);
-			if (ferror (pOutputFile))
-			{
-				printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fwrite ((void *) &iSizeY, sizeof (int), 1, pOutputFile);
+            if (ferror (pOutputFile))
+            {
+                printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fwrite ((void *) &iByteDepth, sizeof (int), 1, pOutputFile);
-			if (ferror (pOutputFile))
-			{
-				printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fwrite ((void *) &iByteDepth, sizeof (int), 1, pOutputFile);
+            if (ferror (pOutputFile))
+            {
+                printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fwrite (pOffsetBuffer, iByteDepth, iSizeX*iSizeY, pOutputFile);
-			if (ferror (pOutputFile))
-			{
-				printf ("Failed to write data for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fwrite (pOffsetBuffer, iByteDepth, iSizeX*iSizeY, pOutputFile);
+            if (ferror (pOutputFile))
+            {
+                printf ("Failed to write data for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fclose (pOutputFile);
-		}
+            fclose (pOutputFile);
+        }
 
-	}
+    }
 
-	//Save gain buffer
-	if (pGainBuffer != NULL)
-	{
-		sprintf (cpFileName, "%sGain_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
-		printf ("Gain file name: %s\n", cpFileName);
+    //Save gain buffer
+    if (pGainBuffer != NULL)
+    {
+        sprintf (cpFileName, "%sGain_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
+        printf ("Gain file name: %s\n", cpFileName);
 
-		pOutputFile = fopen (cpFileName, "wb");
+        pOutputFile = fopen (cpFileName, "wb");
 
-		if (pOutputFile != NULL)
-		{
-			iByteDepth = sizeof (DWORD);
+        if (pOutputFile != NULL)
+        {
+            iByteDepth = sizeof (DWORD);
 
-			fwrite ((void *) &iSizeX, sizeof (int), 1, pOutputFile);
-			if (ferror (pOutputFile))
-			{
-				printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fwrite ((void *) &iSizeX, sizeof (int), 1, pOutputFile);
+            if (ferror (pOutputFile))
+            {
+                printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fwrite ((void *) &iSizeY, sizeof (int), 1, pOutputFile);
-			if (ferror (pOutputFile))
-			{
-				printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fwrite ((void *) &iSizeY, sizeof (int), 1, pOutputFile);
+            if (ferror (pOutputFile))
+            {
+                printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fwrite ((void *) &iByteDepth, sizeof (int), 1, pOutputFile);
-			if (ferror (pOutputFile))
-			{
-				printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fwrite ((void *) &iByteDepth, sizeof (int), 1, pOutputFile);
+            if (ferror (pOutputFile))
+            {
+                printf ("Failed to write file header for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fwrite (pGainBuffer, iByteDepth, iSizeX*iSizeY, pOutputFile);
-			if (ferror (pOutputFile))
-			{
-				printf ("Failed to write data for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fwrite (pGainBuffer, iByteDepth, iSizeX*iSizeY, pOutputFile);
+            if (ferror (pOutputFile))
+            {
+                printf ("Failed to write data for file %s in PerkinElmer::saveCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fclose (pOutputFile);
-		}
+            fclose (pOutputFile);
+        }
 
-	}
+    }
 
-	printf ("Correction files saved!\n");
+    printf ("Correction files saved!\n");
 }
 
 //_____________________________________________________________________________________________
 
 void PerkinElmer::loadCorrectionFiles (void)
 {
-int 				iGainIndex,
-					iTimeIndex,
-					iSizeX,
-					iSizeY,
-					iByteDepth,
-					addr=0,
-					status = asynSuccess;
-char				cpCorrectionsDirectory[256],
-					cpPixelCorrectionFile[256],
-					cpFileName[256],
-					cpGain[10],
-					cpTime[10];
-FILE				*pInputFile;
+int                 iGainIndex,
+                    iTimeIndex,
+                    iSizeX,
+                    iSizeY,
+                    iByteDepth,
+                    addr=0,
+                    status = asynSuccess;
+char                cpCorrectionsDirectory[256],
+                    cpPixelCorrectionFile[256],
+                    cpFileName[256],
+                    cpGain[10],
+                    cpTime[10];
+FILE                *pInputFile;
 
-struct stat 		stat_buffer;
+struct stat         stat_buffer;
 
-	printf ("Trying to load correction files...\n");
+    printf ("Trying to load correction files...\n");
 
-	status |= getStringParam(PE_CorrectionsDirectory, sizeof(cpCorrectionsDirectory), cpCorrectionsDirectory);
-	status |= getStringParam(PE_PixelCorrectionFile, sizeof(cpPixelCorrectionFile), cpPixelCorrectionFile);
-	status |= getIntegerParam(addr, PE_GainRBV, &iGainIndex);
-	status |= getIntegerParam(addr, PE_DwellTimeRBV, &iTimeIndex);
+    status |= getStringParam(PE_CorrectionsDirectory, sizeof(cpCorrectionsDirectory), cpCorrectionsDirectory);
+    status |= getStringParam(PE_PixelCorrectionFile, sizeof(cpPixelCorrectionFile), cpPixelCorrectionFile);
+    status |= getIntegerParam(addr, PE_GainRBV, &iGainIndex);
+    status |= getIntegerParam(addr, PE_DwellTimeRBV, &iTimeIndex);
     status |= getIntegerParam(addr, NDArraySizeX, &iSizeX);
     status |= getIntegerParam(addr, NDArraySizeY, &iSizeY);
 
-	switch (iTimeIndex)
-	{
-		case TIME0 : sprintf (cpTime, "%s", TIME0_STR); break;
-		case TIME1 : sprintf (cpTime, "%s", TIME1_STR); break;
-		case TIME2 : sprintf (cpTime, "%s", TIME2_STR); break;
-		case TIME3 : sprintf (cpTime, "%s", TIME3_STR); break;
-		case TIME4 : sprintf (cpTime, "%s", TIME4_STR); break;
-		case TIME5 : sprintf (cpTime, "%s", TIME5_STR); break;
-		case TIME6 : sprintf (cpTime, "%s", TIME6_STR); break;
-		case TIME7 : sprintf (cpTime, "%s", TIME7_STR); break;
-	}
+    switch (iTimeIndex)
+    {
+        case TIME0 : sprintf (cpTime, "%s", TIME0_STR); break;
+        case TIME1 : sprintf (cpTime, "%s", TIME1_STR); break;
+        case TIME2 : sprintf (cpTime, "%s", TIME2_STR); break;
+        case TIME3 : sprintf (cpTime, "%s", TIME3_STR); break;
+        case TIME4 : sprintf (cpTime, "%s", TIME4_STR); break;
+        case TIME5 : sprintf (cpTime, "%s", TIME5_STR); break;
+        case TIME6 : sprintf (cpTime, "%s", TIME6_STR); break;
+        case TIME7 : sprintf (cpTime, "%s", TIME7_STR); break;
+    }
 
-	switch (iGainIndex)
-	{
-		case GAIN0 : sprintf (cpGain, "%s", GAIN0_STR); break;
-		case GAIN1 : sprintf (cpGain, "%s", GAIN1_STR); break;
-		case GAIN2 : sprintf (cpGain, "%s", GAIN2_STR); break;
-		case GAIN3 : sprintf (cpGain, "%s", GAIN3_STR); break;
-		case GAIN4 : sprintf (cpGain, "%s", GAIN4_STR); break;
-		case GAIN5 : sprintf (cpGain, "%s", GAIN5_STR); break;
-	}
-
-
-	//load offset corrections
-	sprintf (cpFileName, "%sOffset_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
-	printf ("Offset Correction File: %s\n", cpFileName);
-	if ((stat (cpFileName, &stat_buffer) == 0) && (stat_buffer.st_mode & S_IFREG))
-	{
-		if (pOffsetBuffer != NULL)
-			free (pOffsetBuffer);
-
-		pInputFile = fopen (cpFileName, "rb");
-		if (pInputFile != NULL)
-		{
-			fread (&iSizeX, sizeof (int), 1, pInputFile);
-			if (ferror (pInputFile))
-			{
-				printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
-				return;
-			}
-
-			fread (&iSizeY, sizeof (int), 1, pInputFile);
-			if (ferror (pInputFile))
-			{
-				printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
-				return;
-			}
-
-			fread (&iByteDepth, sizeof (int), 1, pInputFile);
-			if (ferror (pInputFile))
-			{
-				printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
-				return;
-			}
-
-			pOffsetBuffer = (unsigned short *) malloc (iSizeX * iSizeY * iByteDepth);
-			fread (pOffsetBuffer, iByteDepth, iSizeX * iSizeY, pInputFile);
-			if (ferror (pInputFile))
-			{
-				printf ("Failed to read data for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
-				return;
-			}
-
-			fclose (pInputFile);
-
-			status |= setIntegerParam(addr, PE_OffsetAvailable, AVAILABLE);
-			callParamCallbacks();
-		}
-		else
-		    printf ("Failed to open file %s in PerkinElmer::loadCorrectionsFile!\n", cpFileName);
-	}
-	else
-	    printf ("Failed to find offset file for time %s and gain %s!\n", cpTime, cpGain);
+    switch (iGainIndex)
+    {
+        case GAIN0 : sprintf (cpGain, "%s", GAIN0_STR); break;
+        case GAIN1 : sprintf (cpGain, "%s", GAIN1_STR); break;
+        case GAIN2 : sprintf (cpGain, "%s", GAIN2_STR); break;
+        case GAIN3 : sprintf (cpGain, "%s", GAIN3_STR); break;
+        case GAIN4 : sprintf (cpGain, "%s", GAIN4_STR); break;
+        case GAIN5 : sprintf (cpGain, "%s", GAIN5_STR); break;
+    }
 
 
-	//load gain corrections
-	sprintf (cpFileName, "%sGain_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
-	printf ("Gain Correction File: %s\n", cpFileName);
-	if ((stat (cpFileName, &stat_buffer) == 0) && (stat_buffer.st_mode & S_IFREG))
-	{
-		if (pGainBuffer != NULL)
-			free (pGainBuffer);
+    //load offset corrections
+    sprintf (cpFileName, "%sOffset_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
+    printf ("Offset Correction File: %s\n", cpFileName);
+    if ((stat (cpFileName, &stat_buffer) == 0) && (stat_buffer.st_mode & S_IFREG))
+    {
+        if (pOffsetBuffer != NULL)
+            free (pOffsetBuffer);
 
-		pInputFile = fopen (cpFileName, "rb");
-		if (pInputFile != NULL)
-		{
-			fread (&iSizeX, sizeof (int), 1, pInputFile);
-			if (ferror (pInputFile))
-			{
-				printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
-				return;
-			}
+        pInputFile = fopen (cpFileName, "rb");
+        if (pInputFile != NULL)
+        {
+            fread (&iSizeX, sizeof (int), 1, pInputFile);
+            if (ferror (pInputFile))
+            {
+                printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fread (&iSizeY, sizeof (int), 1, pInputFile);
-			if (ferror (pInputFile))
-			{
-				printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fread (&iSizeY, sizeof (int), 1, pInputFile);
+            if (ferror (pInputFile))
+            {
+                printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fread (&iByteDepth, sizeof (int), 1, pInputFile);
-			if (ferror (pInputFile))
-			{
-				printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            fread (&iByteDepth, sizeof (int), 1, pInputFile);
+            if (ferror (pInputFile))
+            {
+                printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			pGainBuffer = (DWORD *) malloc (iSizeX * iSizeY * iByteDepth);
-			fread (pGainBuffer, iByteDepth, iSizeX * iSizeY, pInputFile);
-			if (ferror (pInputFile))
-			{
-				printf ("Failed to read data for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
-				return;
-			}
+            pOffsetBuffer = (unsigned short *) malloc (iSizeX * iSizeY * iByteDepth);
+            fread (pOffsetBuffer, iByteDepth, iSizeX * iSizeY, pInputFile);
+            if (ferror (pInputFile))
+            {
+                printf ("Failed to read data for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
+                return;
+            }
 
-			fclose (pInputFile);
+            fclose (pInputFile);
 
-			status |= setIntegerParam(addr, PE_GainAvailable, AVAILABLE);
-			callParamCallbacks();
-		}
-		else
-		    printf ("Failed to open file %s in PerkinElmer::loadCorrectionsFile!\n", cpFileName);
-	}
-	else
-	    printf ("Failed to find gain file for time %s and gain %s!\n", cpTime, cpGain);
-
-
-	//load pixel correction file
-	sprintf (cpFileName, "%s%s", cpCorrectionsDirectory, cpPixelCorrectionFile);
-	printf ("Pixel Correction File: %s\n", cpFileName);
-	if ((stat (cpFileName, &stat_buffer) == 0) && (stat_buffer.st_mode & S_IFREG))
-	{
-		status |= setStringParam (addr, PE_PixelCorrectionFileRBV, cpPixelCorrectionFile);
-		readPixelCorrectionFile (cpFileName);
-	}
-	else
-	    status |= setStringParam (addr, PE_PixelCorrectionFileRBV, "none");
+            status |= setIntegerParam(addr, PE_OffsetAvailable, AVAILABLE);
+            callParamCallbacks();
+        }
+        else
+            printf ("Failed to open file %s in PerkinElmer::loadCorrectionsFile!\n", cpFileName);
+    }
+    else
+        printf ("Failed to find offset file for time %s and gain %s!\n", cpTime, cpGain);
 
 
-	printf ("Correction files loaded!\n");
+    //load gain corrections
+    sprintf (cpFileName, "%sGain_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
+    printf ("Gain Correction File: %s\n", cpFileName);
+    if ((stat (cpFileName, &stat_buffer) == 0) && (stat_buffer.st_mode & S_IFREG))
+    {
+        if (pGainBuffer != NULL)
+            free (pGainBuffer);
+
+        pInputFile = fopen (cpFileName, "rb");
+        if (pInputFile != NULL)
+        {
+            fread (&iSizeX, sizeof (int), 1, pInputFile);
+            if (ferror (pInputFile))
+            {
+                printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
+                return;
+            }
+
+            fread (&iSizeY, sizeof (int), 1, pInputFile);
+            if (ferror (pInputFile))
+            {
+                printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
+                return;
+            }
+
+            fread (&iByteDepth, sizeof (int), 1, pInputFile);
+            if (ferror (pInputFile))
+            {
+                printf ("Failed to read file header for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
+                return;
+            }
+
+            pGainBuffer = (DWORD *) malloc (iSizeX * iSizeY * iByteDepth);
+            fread (pGainBuffer, iByteDepth, iSizeX * iSizeY, pInputFile);
+            if (ferror (pInputFile))
+            {
+                printf ("Failed to read data for file %s in PerkinElmer::loadCorrectionFiles.\n", cpFileName);
+                return;
+            }
+
+            fclose (pInputFile);
+
+            status |= setIntegerParam(addr, PE_GainAvailable, AVAILABLE);
+            callParamCallbacks();
+        }
+        else
+            printf ("Failed to open file %s in PerkinElmer::loadCorrectionsFile!\n", cpFileName);
+    }
+    else
+        printf ("Failed to find gain file for time %s and gain %s!\n", cpTime, cpGain);
+
+
+    //load pixel correction file
+    sprintf (cpFileName, "%s%s", cpCorrectionsDirectory, cpPixelCorrectionFile);
+    printf ("Pixel Correction File: %s\n", cpFileName);
+    if ((stat (cpFileName, &stat_buffer) == 0) && (stat_buffer.st_mode & S_IFREG))
+    {
+        status |= setStringParam (addr, PE_PixelCorrectionFileRBV, cpPixelCorrectionFile);
+        readPixelCorrectionFile (cpFileName);
+    }
+    else
+        status |= setStringParam (addr, PE_PixelCorrectionFileRBV, "none");
+
+
+    printf ("Correction files loaded!\n");
 
 }
 
@@ -1777,131 +1794,131 @@ struct stat 		stat_buffer;
 
 void PerkinElmer::readPixelCorrectionFile (char *pixel_correction_file)
 {
-FILE				*pInputFile;
-WinHeaderType		file_header;
-WinImageHeaderType	image_header;
-int 				iBufferSize,
-					iCorrectionMapSize,
-					addr=0,
-					status = asynSuccess;
-unsigned int		uiStatus;
+FILE                *pInputFile;
+WinHeaderType        file_header;
+WinImageHeaderType    image_header;
+int                 iBufferSize,
+                    iCorrectionMapSize,
+                    addr=0,
+                    status = asynSuccess;
+unsigned int        uiStatus;
 
-	pInputFile = fopen (pixel_correction_file, "r");
+    pInputFile = fopen (pixel_correction_file, "r");
 
-	if (pInputFile != NULL)
-	{
-		//read file header
-		fread ((void *) &file_header, 68, 1, pInputFile);
-		if (ferror (pInputFile))
-		{
-			printf ("Failed to read file header from file %s in PerkinElmer::readPixelCorrectionFile.\n", pixel_correction_file);
-			return;
-		}
+    if (pInputFile != NULL)
+    {
+        //read file header
+        fread ((void *) &file_header, 68, 1, pInputFile);
+        if (ferror (pInputFile))
+        {
+            printf ("Failed to read file header from file %s in PerkinElmer::readPixelCorrectionFile.\n", pixel_correction_file);
+            return;
+        }
 
-		//read image header
-		fread ((void *) &image_header, 32, 1, pInputFile);
-		if (ferror (pInputFile))
-		{
-			printf ("Failed to read image header from file %s in PerkinElmer::readPixelCorrectionFile.\n", pixel_correction_file);
-			return;
-		}
+        //read image header
+        fread ((void *) &image_header, 32, 1, pInputFile);
+        if (ferror (pInputFile))
+        {
+            printf ("Failed to read image header from file %s in PerkinElmer::readPixelCorrectionFile.\n", pixel_correction_file);
+            return;
+        }
 
-		//read bad pixel map
-		if (pBadPixelMap != NULL)
-			free (pBadPixelMap);
-		iBufferSize = file_header.ULY * file_header.BRX * sizeof (unsigned short);
-		pBadPixelMap = (unsigned short *) malloc (iBufferSize);
-		printf ("buffer size: %d, pBadPixelMap: %d\n", iBufferSize, pBadPixelMap);
-		if (pBadPixelMap == NULL)
-		{
-			printf ("Failed to allocate bad pixel map buffer in PerkinElmer::readPixelCorrectionFile.\n");
-			return;
-		}
-		fread ((void *) pBadPixelMap, iBufferSize, 1, pInputFile);
-		if (ferror (pInputFile))
-		{
-			printf ("Failed to read bad pixel map file %s in PerkinElmer::readPixelCorrectionFile.\n", pixel_correction_file);
-			return;
-		}
+        //read bad pixel map
+        if (pBadPixelMap != NULL)
+            free (pBadPixelMap);
+        iBufferSize = file_header.ULY * file_header.BRX * sizeof (unsigned short);
+        pBadPixelMap = (unsigned short *) malloc (iBufferSize);
+        printf ("buffer size: %d, pBadPixelMap: %d\n", iBufferSize, pBadPixelMap);
+        if (pBadPixelMap == NULL)
+        {
+            printf ("Failed to allocate bad pixel map buffer in PerkinElmer::readPixelCorrectionFile.\n");
+            return;
+        }
+        fread ((void *) pBadPixelMap, iBufferSize, 1, pInputFile);
+        if (ferror (pInputFile))
+        {
+            printf ("Failed to read bad pixel map file %s in PerkinElmer::readPixelCorrectionFile.\n", pixel_correction_file);
+            return;
+        }
 
-		fclose (pInputFile);
+        fclose (pInputFile);
 
-		int counter = 0;
-		for (int loop=0;loop<file_header.ULY * file_header.BRX;loop++)
-		{
-			if (pBadPixelMap[loop] == 65535)
-				counter++;
-		}
-		printf ("Bad pixel map read in!  %d bad pixels found!\n", counter);
+        int counter = 0;
+        for (int loop=0;loop<file_header.ULY * file_header.BRX;loop++)
+        {
+            if (pBadPixelMap[loop] == 65535)
+                counter++;
+        }
+        printf ("Bad pixel map read in!  %d bad pixels found!\n", counter);
 
-		//first call with correction list = NULL returns size of buffer to allocate
-		//second time gets the correction list
-		uiStatus = Acquisition_CreatePixelMap (pBadPixelMap, file_header.ULY, file_header.BRX, NULL, &iCorrectionMapSize);
-		pPixelCorrectionList = (int *) malloc (iCorrectionMapSize);
-		uiStatus = Acquisition_CreatePixelMap (pBadPixelMap, file_header.ULY, file_header.BRX, pPixelCorrectionList, &iCorrectionMapSize);
+        //first call with correction list = NULL returns size of buffer to allocate
+        //second time gets the correction list
+        uiStatus = Acquisition_CreatePixelMap (pBadPixelMap, file_header.ULY, file_header.BRX, NULL, &iCorrectionMapSize);
+        pPixelCorrectionList = (int *) malloc (iCorrectionMapSize);
+        uiStatus = Acquisition_CreatePixelMap (pBadPixelMap, file_header.ULY, file_header.BRX, pPixelCorrectionList, &iCorrectionMapSize);
 
-		free (pBadPixelMap);
+        free (pBadPixelMap);
 
-		status |= setIntegerParam(addr, PE_PixelCorrectionAvailable, AVAILABLE);
-		callParamCallbacks();
-	}
-	else
-		printf ("Failed to open file %s in PerkinElmer::readPixelCorrectionFile.\n", pixel_correction_file);
+        status |= setIntegerParam(addr, PE_PixelCorrectionAvailable, AVAILABLE);
+        callParamCallbacks();
+    }
+    else
+        printf ("Failed to open file %s in PerkinElmer::readPixelCorrectionFile.\n", pixel_correction_file);
 
 }
 
 //-------------------------------------------------------------
 asynStatus PerkinElmer::setTriggerMode() {
-	int error;
-	int mode;
-	int addr = 0;
+    int error;
+    int mode;
+    int addr = 0;
 
-	mode = this->trigModeReq;
+    mode = this->trigModeReq;
 
-	switch (mode) {
-	   case PE_FREE_RUNNING: {
-			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_FREE_RUNNING);
-			break;
-	   }
-	   case PE_EXTERNAL_TRIGGER: {
-			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_EXTERNAL_TRIGGER);
-			break;
-	   }
-	   case PE_INTERNAL_TRIGGER: {
-			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_INTERNAL_TIMER);
-			break;
-	   }
-	   case PE_SOFT_TRIGGER: {
-			error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_SOFT_TRIGGER);
-			break;
-	   }
-	}
-	this->trigModeAct = mode;
+    switch (mode) {
+       case PE_FREE_RUNNING: {
+            error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_FREE_RUNNING);
+            break;
+       }
+       case PE_EXTERNAL_TRIGGER: {
+            error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_EXTERNAL_TRIGGER);
+            break;
+       }
+       case PE_INTERNAL_TRIGGER: {
+            error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_INTERNAL_TIMER);
+            break;
+       }
+       case PE_SOFT_TRIGGER: {
+            error = Acquisition_SetFrameSyncMode(hAcqDesc,HIS_SYNCMODE_SOFT_TRIGGER);
+            break;
+       }
+    }
+    this->trigModeAct = mode;
     setIntegerParam(addr, ADTriggerMode, this->trigModeAct);
     callParamCallbacks();
 
-	return asynSuccess;
+    return asynSuccess;
 
 }
 
 //-------------------------------------------------------------
 asynStatus PerkinElmer::setExposureTime() {
-	const char *functionName = "setExposureTime";
-	int addr = 0;
-	DWORD dwDwellTime;
-	int status = asynSuccess;
-	int error;
+    const char *functionName = "setExposureTime";
+    int addr = 0;
+    DWORD dwDwellTime;
+    int status = asynSuccess;
+    int error;
 
-	asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s: Setting AcquireTime %f\n",
-				driverName, functionName, this->acqTimeReq );
-	dwDwellTime = (DWORD) (this->acqTimeReq * 1000000);
-	printf ("internal timer requested: %d\n", dwDwellTime);
-	error = Acquisition_SetTimerSync(hAcqDesc, &dwDwellTime);
-	this->acqTimeAct = dwDwellTime/1000000.;
-	printf ("internal timer set: %f\n", this->acqTimeAct);
-	status |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
-	callParamCallbacks();
+    asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "%s:%s: Setting AcquireTime %f\n",
+                driverName, functionName, this->acqTimeReq );
+    dwDwellTime = (DWORD) (this->acqTimeReq * 1000000);
+    printf ("internal timer requested: %d\n", dwDwellTime);
+    error = Acquisition_SetTimerSync(hAcqDesc, &dwDwellTime);
+    this->acqTimeAct = dwDwellTime/1000000.;
+    printf ("internal timer set: %f\n", this->acqTimeAct);
+    status |= setDoubleParam(addr, ADAcquireTime, this->acqTimeAct );
+    callParamCallbacks();
 
-	return asynSuccess;
+    return asynSuccess;
 
 }
