@@ -31,6 +31,8 @@
 #include <epicsStdio.h>
 #include <epicsMutex.h>
 #include <cantProceed.h>
+#include <iocsh.h>
+#include <epicsExport.h>
 
 #include "asynNDArrayDriver.h"
 #include "NDArray.h"
