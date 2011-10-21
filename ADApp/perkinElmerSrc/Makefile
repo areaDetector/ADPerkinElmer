@@ -10,7 +10,6 @@ endif
 
 LIBRARY_IOC_WIN32 = PerkinElmer
 LIB_SRCS_WIN32 += PerkinElmer.cpp
-LIB_SRCS_WIN32 += drvPerkinElmerEpics.c
 
 PROD_IOC_WIN32 += PerkinElmerApp
 
