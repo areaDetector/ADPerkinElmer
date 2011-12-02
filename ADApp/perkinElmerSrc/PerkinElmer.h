@@ -56,6 +56,16 @@ typedef enum
   PE_ACQUIRE_GAIN
 } PEAcquisitionMode_t;
 
+// We add an additional mode to ADImageMode = PEImageAverage
+
+typedef enum
+{
+  PEImageSingle     = ADImageSingle,
+  PEImageMultiple   = ADImageMultiple,
+  PEImageContinuous = ADImageContinuous,
+  PEImageAverage
+} PEImageMode_t;
+
 typedef enum
 {
   PE_INTERNAL_TRIGGER,
