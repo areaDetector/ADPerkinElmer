@@ -1,0 +1,12 @@
+<?xml version="1.0" standalone="no" ?>
+<!-- Attributes -->
+<Attributes
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://epics.aps.anl.gov/areaDetector/attributes ../attributes.xsd"
+    >
+    <Attribute name="PhiMotorRBV"         type="EPICS_PV" source="13BMC:m33.RBV"                dbrtype="DBR_NATIVE"  description="Phi motor position"/>
+    <Attribute name="RingCurrent"         type="EPICS_PV" source="S:SRcurrentAI"                dbrtype="DBR_NATIVE"  description="Storage ring current"/>
+    <Attribute name="IonChamberI0"        type="EPICS_PV" source="13BMC:scaler1_cts1.B"         dbrtype="DBR_NATIVE"  description="Ion chamber counts"/>
+</Attributes>
+    
+    
