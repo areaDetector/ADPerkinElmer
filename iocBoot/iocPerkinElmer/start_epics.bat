@@ -1,3 +1,3 @@
-start medm -x -macro "P=JPHPE1:, R=cam1:" PerkinElmer.adl
-..\..\bin\win32-x86\PerkinElmerApp st.cmd
+start medm -x -macro "P=13PE1:, R=cam1:" PerkinElmer.adl
+..\..\bin\windows-x64\PerkinElmerApp st.cmd
 
