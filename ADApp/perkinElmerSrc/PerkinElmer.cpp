@@ -638,6 +638,7 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
   int           useGain;
   int           usePixelCorrection;
   int           dims[2];
+  int           acquiring;
   DWORD         HISError;
   DWORD         FGError;
   NDArray       *pImage;
@@ -680,6 +681,11 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
           "%s:%s: Error: %d Acquisition_GetActFrame failed, HIS Error: %d, Frame Grabber Error: %d\n", 
           driverName, functionName, uiStatus, HISError, FGError);
       }
+      getIntegerParam(ADImageMode, &imageMode);
+      getIntegerParam(ADNumImages, &numImages);
+      getIntegerParam(ADNumImagesCounter, &imageCounter);
+      imageCounter++;
+      setIntegerParam(ADNumImagesCounter, imageCounter);
       asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
         "%s:%s: ActAcqFrame = %d, ActBuffFrame = %d\n", 
         driverName, functionName, ActAcqFrame, ActBuffFrame);
@@ -688,6 +694,15 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
       asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
         "%s:%s: uiNumBuffersInUse_ = %d\n", 
         driverName, functionName, uiNumBuffersInUse_);
+      if (imageMode == PEImageAverage) {
+        // We don't want to do anything if we are in average mode except if
+        // we have been called from the endAcqCallback, in which case ADAcquire will be 0
+        getIntegerParam(ADAcquire, &acquiring);
+        if (acquiring) goto done;
+        // We force it to use the first buffer, even though Acquisition_GetActFrame 
+        // says ActBuffFrame is something else
+        ActBuffFrame = 1;
+      }
       currBuff = (ActBuffFrame - 1) % uiNumBuffersInUse_;
       pInput = &pAcqBuffer_[uiColumns_ * uiRows_ * currBuff];
       dataType = NDUInt16;
@@ -708,12 +723,7 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
       if ((usePixelCorrection) && (pPixelCorrectionList_ != NULL))
         uiStatus = Acquisition_DoPixelCorrection (pInput, pPixelCorrectionList_);
 
-      getIntegerParam(ADNumImages, &numImages);
-      getIntegerParam(ADImageMode, &imageMode);
-      getIntegerParam(ADNumImagesCounter, &imageCounter);
-      imageCounter++;
-      setIntegerParam(ADNumImagesCounter, imageCounter);
-      if ((imageMode == ADImageMultiple) && (imageCounter >= numImages))
+      if ((imageMode == PEImageMultiple) && (imageCounter >= numImages))
         acquireStop();
       break;
   }
@@ -765,6 +775,7 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
   doCallbacksGenericPointer(pImage, NDArrayData, 0);
   lock();
 
+  done:
   // Do callbacks on parameters
   callParamCallbacks();
 
@@ -805,6 +816,7 @@ static void CALLBACK endAcqCallbackC(HACQDESC hAcqDesc)
 
 void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
 {
+  int imageMode;
   static const char *functionName = "endAcqCallback";
 
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
@@ -834,6 +846,10 @@ void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
   case PE_ACQUIRE_ACQUISITION:
     setIntegerParam(ADStatus, ADStatusIdle);
     setIntegerParam(ADAcquire, 0);
+    getIntegerParam(ADImageMode, &imageMode);
+    if (imageMode == PEImageAverage) {
+      endFrameCallback(hAcqDesc);
+    }
     break;
   
   }
@@ -1027,13 +1043,16 @@ void PerkinElmer::acquireStart(void)
 
   switch(iMode)
   {
-    case ADImageSingle:  
+    case PEImageSingle:  
       iFrames = 1; 
       break;
 
-    case ADImageMultiple:
-    case ADImageContinuous:
+    case PEImageMultiple:
+    case PEImageContinuous:
       iFrames = uiNumFrameBuffers_;
+      break;
+    case PEImageAverage:
+      status |= getIntegerParam(ADNumImages, &iFrames);
       break;
 
   }
@@ -1056,14 +1075,18 @@ void PerkinElmer::acquireStart(void)
   Acquisition_ResetFrameCnt(hAcqDesc_);
   Acquisition_SetReady(hAcqDesc_, 1);
   switch (iMode) {
-    case ADImageSingle:
+    case PEImageSingle:
       uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames + numLeadingImagesToSkip, numLeadingImagesToSkip,
                                              HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL);
       break;
-    case ADImageMultiple:
-    case ADImageContinuous:
+    case PEImageMultiple:
+    case PEImageContinuous:
       uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames, numLeadingImagesToSkip,
                                              HIS_SEQ_CONTINUOUS, NULL, NULL, NULL);
+      break;
+    case PEImageAverage:
+      uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames, numLeadingImagesToSkip,
+                                             HIS_SEQ_AVERAGE, NULL, NULL, NULL);
       break;
   }
 
