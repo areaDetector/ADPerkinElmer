@@ -62,16 +62,18 @@ PerkinElmer::PerkinElmer(const char *portName, int maxBuffers,
   createParam(PE_CurrentGainFrameString,            asynParamInt32,   &PE_CurrentGainFrame);
   createParam(PE_UseGainString,                     asynParamInt32,   &PE_UseGain);
   createParam(PE_GainAvailableString,               asynParamInt32,   &PE_GainAvailable);
+  createParam(PE_GainFileString,                    asynParamOctet,   &PE_GainFile);
+  createParam(PE_LoadGainFileString,                asynParamInt32,   &PE_LoadGainFile);
+  createParam(PE_SaveGainFileString,                asynParamInt32,   &PE_SaveGainFile);
+  createParam(PE_UsePixelCorrectionString,          asynParamInt32,   &PE_UsePixelCorrection);
   createParam(PE_PixelCorrectionAvailableString,    asynParamInt32,   &PE_PixelCorrectionAvailable);
+  createParam(PE_PixelCorrectionFileString,         asynParamOctet,   &PE_PixelCorrectionFile);
+  createParam(PE_LoadPixelCorrectionFileString,     asynParamInt32,   &PE_LoadPixelCorrectionFile);
   createParam(PE_GainString,                        asynParamInt32,   &PE_Gain);
   createParam(PE_DwellTimeString,                   asynParamInt32,   &PE_DwellTime);
   createParam(PE_NumFrameBuffersString,             asynParamInt32,   &PE_NumFrameBuffers);
   createParam(PE_TriggerString,                     asynParamInt32,   &PE_Trigger);
   createParam(PE_SyncTimeString,                    asynParamInt32,   &PE_SyncTime);
-  createParam(PE_UsePixelCorrectionString,          asynParamInt32,   &PE_UsePixelCorrection);
-  createParam(PE_LoadCorrectionFilesString,         asynParamInt32,   &PE_LoadCorrectionFiles);
-  createParam(PE_SaveCorrectionFilesString,         asynParamInt32,   &PE_SaveCorrectionFiles);
-  createParam(PE_PixelCorrectionFileString,         asynParamOctet,   &PE_PixelCorrectionFile);
   createParam(PE_CorrectionsDirectoryString,        asynParamOctet,   &PE_CorrectionsDirectory);
   createParam(PE_FrameBufferIndexString,            asynParamInt32,   &PE_FrameBufferIndex);
   createParam(PE_ImageNumberString,                 asynParamInt32,   &PE_ImageNumber);
@@ -97,6 +99,7 @@ PerkinElmer::PerkinElmer(const char *portName, int maxBuffers,
   status |= setIntegerParam(PE_GainAvailable, NOT_AVAILABLE);
   status |= setIntegerParam(PE_PixelCorrectionAvailable, NOT_AVAILABLE);
   status |= setStringParam (PE_CorrectionsDirectory, "");
+  status |= setStringParam (PE_GainFile, "");
   status |= setStringParam (PE_PixelCorrectionFile, "");
   status |= setIntegerParam(PE_FrameBufferIndex, 0);
   status |= setIntegerParam(PE_ImageNumber, 0);
@@ -922,11 +925,14 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
       setTriggerMode();
     }
   }
-  else if (function == PE_SaveCorrectionFiles) {
-    saveCorrectionFiles();
+  else if (function == PE_LoadGainFile) {
+    loadGainFile();
   }
-  else if (function == PE_LoadCorrectionFiles) {
-    loadCorrectionFiles();
+  else if (function == PE_SaveGainFile) {
+    saveGainFile();
+  }
+  else if (function == PE_LoadPixelCorrectionFile) {
+    loadPixelCorrectionFile();
   }
 
 
@@ -1002,47 +1008,6 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
     asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
         "%s:%s: function=%d, value=%f\n",
         driverName, functionName, function, value);
-  return status;
-}
-
-//_____________________________________________________________________________________________
-/** Called when asyn clients call pasynOctet->write().
-  * This function performs actions for some parameters, including PilatusBadPixelFile, ADFilePath, etc.
-  * For all parameters it sets the value in the parameter library and calls any registered callbacks..
-  * \param[in] pasynUser pasynUser structure that encodes the reason and address.
-  * \param[in] value Address of the string to write.
-  * \param[in] nChars Number of characters to write.
-  * \param[out] nActual Number of characters actually written. */
-asynStatus PerkinElmer::writeOctet(asynUser *pasynUser, const char *value, 
-                                   size_t nChars, size_t *nActual)
-{
-  int function = pasynUser->reason;
-  asynStatus status = asynSuccess;
-  const char *functionName = "writeOctet";
-
-  /* Set the parameter in the parameter library. */
-  setStringParam(function, (char *)value);
-
-  if ((function == PE_PixelCorrectionFile) ||
-      (function == PE_CorrectionsDirectory )) {
-      status = readPixelCorrectionFile();
-  } else {
-    /* If this parameter belongs to a base class call its method */
-    if (function < PE_FIRST_PARAM) status = ADDriver::writeOctet(pasynUser, value, nChars, nActual);
-  }
-
-   /* Do callbacks so higher layers see any changes */
-  callParamCallbacks();
-
-  if (status) 
-    epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize, 
-      "%s:%s: status=%d, function=%d, value=%s", 
-      driverName, functionName, status, function, value);
-  else        
-    asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
-      "%s:%s: function=%d, value=%s\n", 
-      driverName, functionName, function, value);
-  *nActual = nChars;
   return status;
 }
 
@@ -1251,298 +1216,143 @@ void PerkinElmer::acquireGainImage(void)
 
 //_____________________________________________________________________________________________
 
-void PerkinElmer::saveCorrectionFiles(void)
+asynStatus PerkinElmer::saveGainFile(void)
 {
-  int iGainIndex;
-  int iTimeIndex;
   int iSizeX;
   int iSizeY;
   int iByteDepth;
   int status = asynSuccess;
-  char cpCorrectionsDirectory[256];
-  char cpFileName[256];
-  char cpGain[10];
-  char cpTime[10];
+  char gainPath[256];
+  char gainFile[256];
   FILE  *pOutputFile;
-  static const char *functionName = "saveCorrectionFiles";
+  static const char *functionName = "saveGainFile";
 
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
     "%s:%s:, Saving correction files...\n",
     driverName, functionName);
 
-  status |= getStringParam(PE_CorrectionsDirectory, sizeof(cpCorrectionsDirectory), cpCorrectionsDirectory);
-  status |= getIntegerParam(PE_Gain, &iGainIndex);
-  status |= getIntegerParam(PE_DwellTime, &iTimeIndex);
+  status |= getStringParam(PE_CorrectionsDirectory, sizeof(gainPath), gainPath);
+  status |= getStringParam(PE_GainFile, sizeof(gainFile), gainFile);
+  strcat(gainPath, gainFile);
   status |= getIntegerParam(NDArraySizeX, &iSizeX);
   status |= getIntegerParam(NDArraySizeY, &iSizeY);
 
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-    "%s:%s:, Saving correction files to directory %s\n",
-    driverName, functionName, cpCorrectionsDirectory);
-
-  switch (iTimeIndex)
-  {
-    case TIME0 : sprintf (cpTime, "%s", TIME0_STR); break;
-    case TIME1 : sprintf (cpTime, "%s", TIME1_STR); break;
-    case TIME2 : sprintf (cpTime, "%s", TIME2_STR); break;
-    case TIME3 : sprintf (cpTime, "%s", TIME3_STR); break;
-    case TIME4 : sprintf (cpTime, "%s", TIME4_STR); break;
-    case TIME5 : sprintf (cpTime, "%s", TIME5_STR); break;
-    case TIME6 : sprintf (cpTime, "%s", TIME6_STR); break;
-    case TIME7 : sprintf (cpTime, "%s", TIME7_STR); break;
-  }
-
-  switch (iGainIndex)
-  {
-    case GAIN0 : sprintf (cpGain, "%s", GAIN0_STR); break;
-    case GAIN1 : sprintf (cpGain, "%s", GAIN1_STR); break;
-    case GAIN2 : sprintf (cpGain, "%s", GAIN2_STR); break;
-    case GAIN3 : sprintf (cpGain, "%s", GAIN3_STR); break;
-    case GAIN4 : sprintf (cpGain, "%s", GAIN4_STR); break;
-    case GAIN5 : sprintf (cpGain, "%s", GAIN5_STR); break;
-  }
-
-  // Save offset buffer
-  if (pOffsetBuffer_ != NULL)
-  {
-    sprintf (cpFileName, "%sOffset_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-      "%s:%s:, Offset file name: %s\n",
-      driverName, functionName, cpFileName);
-
-    pOutputFile = fopen (cpFileName, "wb");
-
-    if (pOutputFile != NULL)
-    {
-      iByteDepth = sizeof (epicsUInt16);
-
-      fwrite ((void *) &iSizeX, sizeof (int), 1, pOutputFile);
-      fwrite ((void *) &iSizeY, sizeof (int), 1, pOutputFile);
-      fwrite ((void *) &iByteDepth, sizeof (int), 1, pOutputFile);
-      if (ferror (pOutputFile))
-      {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-          "%s:%s: Failed to write file header for file %s\n", 
-          driverName, functionName, cpFileName);
-        return;
-      }
-
-      fwrite (pOffsetBuffer_, iByteDepth, iSizeX*iSizeY, pOutputFile);
-      if (ferror (pOutputFile))
-      {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-          "%s:%s: Failed to write data for file %s\n", 
-          driverName, functionName, cpFileName);
-        return;
-      }
-
-      fclose (pOutputFile);
-    }
-
-  }
-
-  //Save gain buffer
-  if (pGainBuffer_ != NULL)
-  {
-    sprintf (cpFileName, "%sGain_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-      "%s:%s:, Gain file name: %s\n",
-      driverName, functionName, cpFileName);
-
-    pOutputFile = fopen (cpFileName, "wb");
-
-    if (pOutputFile != NULL)
-    {
-      iByteDepth = sizeof (DWORD);
-
-      fwrite ((void *) &iSizeX, sizeof (int), 1, pOutputFile);
-      fwrite ((void *) &iSizeY, sizeof (int), 1, pOutputFile);
-      fwrite ((void *) &iByteDepth, sizeof (int), 1, pOutputFile);
-      if (ferror (pOutputFile))
-      {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-          "%s:%s: Failed to write file header for file %s\n", 
-          driverName, functionName, cpFileName);
-        return;
-      }
-
-      fwrite (pGainBuffer_, iByteDepth, iSizeX*iSizeY, pOutputFile);
-      if (ferror (pOutputFile))
-      {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-          "%s:%s: Failed to write data for file %s\n", 
-          driverName, functionName, cpFileName);
-        return;
-      }
-
-      fclose (pOutputFile);
-    }
-
-  }
+  if (pGainBuffer_ == NULL) return asynError;
 
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-    "%s:%s:, Correction files saved.\n",
-    driverName, functionName);
+    "%s:%s:, saving gain file: %s\n",
+    driverName, functionName, gainPath);
+
+  pOutputFile = fopen (gainPath, "wb");
+
+  if (pOutputFile == NULL) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Error opening gain file %s\n", 
+      driverName, functionName, gainFile);
+    return asynError;
+  }
+  iByteDepth = sizeof (DWORD);
+
+  fwrite ((void *) &iSizeX, sizeof (int), 1, pOutputFile);
+  fwrite ((void *) &iSizeY, sizeof (int), 1, pOutputFile);
+  fwrite ((void *) &iByteDepth, sizeof (int), 1, pOutputFile);
+  if (ferror (pOutputFile)) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Failed to write file header for file %s\n", 
+      driverName, functionName, gainFile);
+    fclose (pOutputFile);
+    return asynError;
+  }
+
+  fwrite (pGainBuffer_, iByteDepth, iSizeX*iSizeY, pOutputFile);
+  if (ferror (pOutputFile)) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Failed to write data for file %s\n", 
+      driverName, functionName, gainFile);
+    fclose (pOutputFile);
+    return asynError;
+  }
+
+  fclose (pOutputFile);
+
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+    "%s:%s:, Gain file %s saved.\n",
+    driverName, functionName, gainFile);
+  return asynSuccess;
 }
+
 
 //_____________________________________________________________________________________________
 
-void PerkinElmer::loadCorrectionFiles (void)
+asynStatus PerkinElmer::loadGainFile (void)
 {
-  int iGainIndex;
-  int iTimeIndex;
-  int iSizeX;
-  int iSizeY;
-  int iByteDepth;
   int status = asynSuccess;
-  char cpCorrectionsDirectory[256];
-  char cpFileName[256];
-  char cpGain[10];
-  char cpTime[10];
+  char gainPath[256];
+  char gainFile[256];
+  int iSizeX, iSizeY, iByteDepth;
   FILE  *pInputFile;
   struct stat stat_buffer;
-  static const char *functionName = "loadCorrectionFiles";
+  static const char *functionName = "loadGainFile";
 
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-    "%s:%s: Loading correction files...\n",
+    "%s:%s: Loading gain file...\n",
     driverName, functionName);
 
-  status |= getStringParam(PE_CorrectionsDirectory, sizeof(cpCorrectionsDirectory), cpCorrectionsDirectory);
-  status |= getIntegerParam(PE_Gain, &iGainIndex);
-  status |= getIntegerParam(PE_DwellTime, &iTimeIndex);
-  status |= getIntegerParam(NDArraySizeX, &iSizeX);
-  status |= getIntegerParam(NDArraySizeY, &iSizeY);
+  status |= getStringParam(PE_CorrectionsDirectory, sizeof(gainPath), gainPath);
+  status |= getStringParam(PE_CorrectionsDirectory, sizeof(gainFile), gainFile);
+  strcat(gainPath, gainFile);
 
-  switch (iTimeIndex)
-  {
-    case TIME0 : sprintf (cpTime, "%s", TIME0_STR); break;
-    case TIME1 : sprintf (cpTime, "%s", TIME1_STR); break;
-    case TIME2 : sprintf (cpTime, "%s", TIME2_STR); break;
-    case TIME3 : sprintf (cpTime, "%s", TIME3_STR); break;
-    case TIME4 : sprintf (cpTime, "%s", TIME4_STR); break;
-    case TIME5 : sprintf (cpTime, "%s", TIME5_STR); break;
-    case TIME6 : sprintf (cpTime, "%s", TIME6_STR); break;
-    case TIME7 : sprintf (cpTime, "%s", TIME7_STR); break;
-  }
-
-  switch (iGainIndex)
-  {
-    case GAIN0 : sprintf (cpGain, "%s", GAIN0_STR); break;
-    case GAIN1 : sprintf (cpGain, "%s", GAIN1_STR); break;
-    case GAIN2 : sprintf (cpGain, "%s", GAIN2_STR); break;
-    case GAIN3 : sprintf (cpGain, "%s", GAIN3_STR); break;
-    case GAIN4 : sprintf (cpGain, "%s", GAIN4_STR); break;
-    case GAIN5 : sprintf (cpGain, "%s", GAIN5_STR); break;
-  }
-
-
-  //load offset corrections
-  sprintf (cpFileName, "%sOffset_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-    "%s:%s:, Offset correction file name: %s\n",
-    driverName, functionName, cpFileName);
-  if ((stat (cpFileName, &stat_buffer) == 0) && (stat_buffer.st_mode & S_IFREG))
-  {
-    if (pOffsetBuffer_ != NULL)
-      free (pOffsetBuffer_);
-
-    pInputFile = fopen (cpFileName, "rb");
-    if (pInputFile != NULL)
-    {
-      fread (&iSizeX, sizeof (int), 1, pInputFile);
-      fread (&iSizeY, sizeof (int), 1, pInputFile);
-      fread (&iByteDepth, sizeof (int), 1, pInputFile);
-      if (ferror (pInputFile))
-      {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-          "%s:%s: Failed to read file header for offset correction file %s\n", 
-          driverName, functionName, cpFileName);
-        return;
-      }
-      pOffsetBuffer_ = (unsigned short *) malloc (iSizeX * iSizeY * iByteDepth);
-      fread (pOffsetBuffer_, iByteDepth, iSizeX * iSizeY, pInputFile);
-      if (ferror (pInputFile))
-      {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-          "%s:%s: Failed to read data for offset correction file %s\n", 
-          driverName, functionName, cpFileName);
-        return;
-      }
-
-      fclose (pInputFile);
-
-      status |= setIntegerParam(PE_OffsetAvailable, AVAILABLE);
-      callParamCallbacks();
-    }
-    else
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-        "%s:%s: Failed to open offset correction file %s\n", 
-        driverName, functionName, cpFileName);
-  }
-  else
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-      "%s:%s: Failed to find offset correction file for time %s and gain %s\n", 
-      driverName, functionName,  cpTime, cpGain);
-
-
-  //load gain corrections
-  sprintf (cpFileName, "%sGain_%s_%s.bin", cpCorrectionsDirectory, cpTime, cpGain);
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
     "%s:%s:, Gain correction file name: %s\n",
-    driverName, functionName, cpFileName);
-  if ((stat (cpFileName, &stat_buffer) == 0) && (stat_buffer.st_mode & S_IFREG))
-  {
-    if (pGainBuffer_ != NULL)
-      free (pGainBuffer_);
-
-    pInputFile = fopen (cpFileName, "rb");
-    if (pInputFile != NULL)
-    {
-      fread (&iSizeX, sizeof (int), 1, pInputFile);
-      fread (&iSizeY, sizeof (int), 1, pInputFile);
-      fread (&iByteDepth, sizeof (int), 1, pInputFile);
-      if (ferror (pInputFile))
-      {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-          "%s:%s: Failed to read file header for gain correction file %s\n", 
-          driverName, functionName, cpFileName);
-        return;
-      }
-      pGainBuffer_ = (DWORD *) malloc (iSizeX * iSizeY * iByteDepth);
-      fread (pGainBuffer_, iByteDepth, iSizeX * iSizeY, pInputFile);
-      if (ferror (pInputFile))
-      {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-          "%s:%s: Failed to read data for gain correction file %s\n", 
-          driverName, functionName, cpFileName);
-        return;
-      }
-
-      fclose (pInputFile);
-
-      status |= setIntegerParam(PE_GainAvailable, AVAILABLE);
-      callParamCallbacks();
-    }
-    else
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-        "%s:%s: Failed to open gain correction file %s\n", 
-        driverName, functionName, cpFileName);
-  }
-  else
+    driverName, functionName, gainPath);
+  if ((stat (gainPath, &stat_buffer) != 0)|| (stat_buffer.st_mode & S_IFREG) == 0) {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-      "%s:%s: Failed to find gain correction file for time %s and gain %s\n", 
-      driverName, functionName,  cpTime, cpGain);
+      "%s:%s: Failed to find gain correction file %s\n", 
+      driverName, functionName, gainPath);
+    return asynError;
+  }
+  if (pGainBuffer_ != NULL)
+    free (pGainBuffer_);
 
+  pInputFile = fopen (gainPath, "rb");
+  if (pInputFile == NULL) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Failed to open gain correction file %s\n", 
+      driverName, functionName, gainPath);
+    return asynError;
+  }
+  fread (&iSizeX, sizeof (int), 1, pInputFile);
+  fread (&iSizeY, sizeof (int), 1, pInputFile);
+  fread (&iByteDepth, sizeof (int), 1, pInputFile);
+  if (ferror (pInputFile)) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Failed to read file header for gain correction file %s\n", 
+      driverName, functionName, gainPath);
+    return asynError;
+  }
+  pGainBuffer_ = (DWORD *) malloc (iSizeX * iSizeY * iByteDepth);
+  fread (pGainBuffer_, iByteDepth, iSizeX * iSizeY, pInputFile);
+  if (ferror (pInputFile)) {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Failed to read data for gain correction file %s\n", 
+      driverName, functionName, gainPath);
+    return asynError;
+  }
+
+  fclose (pInputFile);
+
+  status |= setIntegerParam(PE_GainAvailable, AVAILABLE);
+  callParamCallbacks();
 
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-    "%s:%s:, Correction files loaded\n",
-    driverName, functionName, cpFileName);
+    "%s:%s:, Gain file %s loaded\n",
+    driverName, functionName, gainPath);
+  return asynSuccess;
 
 }
-
 //_____________________________________________________________________________________________
 
-asynStatus PerkinElmer::readPixelCorrectionFile()
+asynStatus PerkinElmer::loadPixelCorrectionFile()
 {
   FILE                *pInputFile;
   WinHeaderType       file_header;
@@ -1557,12 +1367,8 @@ asynStatus PerkinElmer::readPixelCorrectionFile()
   
   setIntegerParam(PE_PixelCorrectionAvailable, NOT_AVAILABLE);
 
-  // If either the file or path are null strings then return success because this usually
-  // happens in iocInit because one record processes before the other.
   getStringParam(PE_PixelCorrectionFile, sizeof(pixelCorrectionFile), pixelCorrectionFile);
-  if (strlen(pixelCorrectionFile) == 0) return asynSuccess;
   getStringParam(PE_CorrectionsDirectory, sizeof(pixelCorrectionPath), pixelCorrectionPath);
-  if (strlen(pixelCorrectionPath) == 0) return asynSuccess;
   strcat(pixelCorrectionPath, pixelCorrectionFile);
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
     "%s:%s:, Pixel correction file name: %s\n",
