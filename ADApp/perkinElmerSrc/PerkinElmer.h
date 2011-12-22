@@ -141,6 +141,7 @@ public:
   /* These are the methods that we override from ADDriver */
   virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
   virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
+  virtual asynStatus writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual);
   void report(FILE *fp, int details);
 
   // These should really be private, but they are called from C so must be public
@@ -153,7 +154,6 @@ protected:
   int PE_SystemID;
   #define PE_FIRST_PARAM PE_SystemID
   int PE_Initialize;
-  int PE_StatusRBV;
   int PE_AcquireOffset;
   int PE_NumOffsetFrames;
   int PE_CurrentOffsetFrame;
@@ -166,27 +166,20 @@ protected:
   int PE_GainAvailable;
   int PE_PixelCorrectionAvailable;
   int PE_Gain;
-  int PE_GainRBV;
   int PE_DwellTime;
-  int PE_DwellTimeRBV;
   int PE_NumFrameBuffers;
-  int PE_NumFrameBuffersRBV;
-  int PE_SyncMode;
-  int PE_SyncModeRBV;
   int PE_Trigger;
   int PE_SyncTime;
-  int PE_SyncTimeRBV;
   int PE_UsePixelCorrection;
   int PE_LoadCorrectionFiles;
   int PE_SaveCorrectionFiles;
   int PE_PixelCorrectionFile;
-  int PE_PixelCorrectionFileRBV;
   int PE_CorrectionsDirectory;
   int PE_FrameBufferIndex;
   int PE_ImageNumber;
-  int PE_SkipLeadingPulses;
-  int PE_NumPulsesToSkip;
-  #define PE_LAST_PARAM PE_NumPulsesToSkip
+  int PE_SkipFrames;
+  int PE_NumFramesToSkip;
+  #define PE_LAST_PARAM PE_NumFramesToSkip
 
 
 private:
@@ -236,7 +229,7 @@ private:
 
   void saveCorrectionFiles(void);
   void loadCorrectionFiles(void);
-  void readPixelCorrectionFile(char *pixel_correction_file);
+  asynStatus readPixelCorrectionFile();
 
   asynStatus PerkinElmer::setTriggerMode(void);
   asynStatus PerkinElmer::setExposureTime(void);
@@ -246,7 +239,6 @@ private:
 //______________________________________________________________________________________________
 #define PE_SystemIDString                   "PE_SYSTEMID"
 #define PE_InitializeString                 "PE_INITIALIZE"
-#define PE_StatusRBVString                  "PE_STATUS_RBV"
 #define PE_AcquireOffsetString              "PE_ACQUIRE_OFFSET"
 #define PE_NumOffsetFramesString            "PE_NUM_OFFSET_FRAMES"
 #define PE_CurrentOffsetFrameString         "PE_CURRENT_OFFSET_FRAME"
@@ -259,26 +251,19 @@ private:
 #define PE_GainAvailableString              "PE_GAIN_AVAILABLE"
 #define PE_PixelCorrectionAvailableString   "PE_PIXEL_CORRECTION_AVAILABLE"
 #define PE_GainString                       "PE_GAIN"
-#define PE_GainRBVString                    "PE_GAIN_RBV"
 #define PE_DwellTimeString                  "PE_DWELL_TIME"
-#define PE_DwellTimeRBVString               "PE_DWELL_TIME_RBV"
 #define PE_NumFrameBuffersString            "PE_NUM_FRAME_BUFFERS"
-#define PE_NumFrameBuffersRBVString         "PE_NUM_FRAME_BUFFERS_RBV"
-#define PE_SyncModeString                   "PE_SYNC_MODE"
-#define PE_SyncModeRBVString                "PE_SYNC_MODE_RBV"
 #define PE_TriggerString                    "PE_TRIGGER"
 #define PE_SyncTimeString                   "PE_SYNC_TIME"
-#define PE_SyncTimeRBVString                "PE_SYNC_TIME_RBV"
 #define PE_UsePixelCorrectionString         "PE_USE_PIXEL_CORRECTION"
 #define PE_LoadCorrectionFilesString        "PE_LOAD_CORRECTION_FILES"
 #define PE_SaveCorrectionFilesString        "PE_SAVE_CORRECTION_FILES"
 #define PE_PixelCorrectionFileString        "PE_PIXEL_CORRECTION_FILE"
-#define PE_PixelCorrectionFileRBVString     "PE_PIXEL_CORRECTION_FILE_RBV"
 #define PE_CorrectionsDirectoryString       "PE_CORRECTIONS_DIRECTORY"
 #define PE_FrameBufferIndexString           "PE_FRAME_BUFFER_INDEX"
 #define PE_ImageNumberString                "PE_IMAGE_NUMBER"
-#define PE_SkipLeadingPulsesString          "PE_SKIP_LEADING_PULSES"
-#define PE_NumPulsesToSkipString            "PE_NUM_PULSES_TO_SKIP"
+#define PE_SkipFramesString                 "PE_SKIP_FRAMES"
+#define PE_NumFramesToSkipString            "PE_NUM_FRAMES_TO_SKIP"
 
 #define NUM_PERKIN_ELMER_PARAMS (&PE_LAST_PARAM - &PE_FIRST_PARAM + 1)
 //______________________________________________________________________________________________
