@@ -141,7 +141,6 @@ public:
   /* These are the methods that we override from ADDriver */
   virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
   virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
-  virtual asynStatus writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual);
   void report(FILE *fp, int details);
 
   // These should really be private, but they are called from C so must be public
@@ -154,6 +153,7 @@ protected:
   int PE_SystemID;
   #define PE_FIRST_PARAM PE_SystemID
   int PE_Initialize;
+  int PE_CorrectionsDirectory;
   int PE_AcquireOffset;
   int PE_NumOffsetFrames;
   int PE_CurrentOffsetFrame;
@@ -164,17 +164,18 @@ protected:
   int PE_CurrentGainFrame;
   int PE_UseGain;
   int PE_GainAvailable;
+  int PE_GainFile;
+  int PE_LoadGainFile;
+  int PE_SaveGainFile;
+  int PE_UsePixelCorrection;
   int PE_PixelCorrectionAvailable;
+  int PE_PixelCorrectionFile;
+  int PE_LoadPixelCorrectionFile;
   int PE_Gain;
   int PE_DwellTime;
   int PE_NumFrameBuffers;
   int PE_Trigger;
   int PE_SyncTime;
-  int PE_UsePixelCorrection;
-  int PE_LoadCorrectionFiles;
-  int PE_SaveCorrectionFiles;
-  int PE_PixelCorrectionFile;
-  int PE_CorrectionsDirectory;
   int PE_FrameBufferIndex;
   int PE_ImageNumber;
   int PE_SkipFrames;
@@ -227,9 +228,9 @@ private:
   void acquireOffsetImage(void);
   void acquireGainImage(void);
 
-  void saveCorrectionFiles(void);
-  void loadCorrectionFiles(void);
-  asynStatus readPixelCorrectionFile();
+  asynStatus loadGainFile(void);
+  asynStatus saveGainFile(void);
+  asynStatus loadPixelCorrectionFile();
 
   asynStatus PerkinElmer::setTriggerMode(void);
   asynStatus PerkinElmer::setExposureTime(void);
@@ -239,6 +240,7 @@ private:
 //______________________________________________________________________________________________
 #define PE_SystemIDString                   "PE_SYSTEMID"
 #define PE_InitializeString                 "PE_INITIALIZE"
+#define PE_CorrectionsDirectoryString       "PE_CORRECTIONS_DIRECTORY"
 #define PE_AcquireOffsetString              "PE_ACQUIRE_OFFSET"
 #define PE_NumOffsetFramesString            "PE_NUM_OFFSET_FRAMES"
 #define PE_CurrentOffsetFrameString         "PE_CURRENT_OFFSET_FRAME"
@@ -249,17 +251,18 @@ private:
 #define PE_CurrentGainFrameString           "PE_CURRENT_GAIN_FRAME"
 #define PE_UseGainString                    "PE_USE_GAIN"
 #define PE_GainAvailableString              "PE_GAIN_AVAILABLE"
+#define PE_GainFileString                   "PE_GAIN_FILE"
+#define PE_LoadGainFileString               "PE_LOAD_GAIN_FILE"
+#define PE_SaveGainFileString               "PE_SAVE_GAIN_FILE"
+#define PE_UsePixelCorrectionString         "PE_USE_PIXEL_CORRECTION"
 #define PE_PixelCorrectionAvailableString   "PE_PIXEL_CORRECTION_AVAILABLE"
+#define PE_PixelCorrectionFileString        "PE_PIXEL_CORRECTION_FILE"
+#define PE_LoadPixelCorrectionFileString    "PE_LOAD_PIXEL_CORRECTION_FILE"
 #define PE_GainString                       "PE_GAIN"
 #define PE_DwellTimeString                  "PE_DWELL_TIME"
 #define PE_NumFrameBuffersString            "PE_NUM_FRAME_BUFFERS"
 #define PE_TriggerString                    "PE_TRIGGER"
 #define PE_SyncTimeString                   "PE_SYNC_TIME"
-#define PE_UsePixelCorrectionString         "PE_USE_PIXEL_CORRECTION"
-#define PE_LoadCorrectionFilesString        "PE_LOAD_CORRECTION_FILES"
-#define PE_SaveCorrectionFilesString        "PE_SAVE_CORRECTION_FILES"
-#define PE_PixelCorrectionFileString        "PE_PIXEL_CORRECTION_FILE"
-#define PE_CorrectionsDirectoryString       "PE_CORRECTIONS_DIRECTORY"
 #define PE_FrameBufferIndexString           "PE_FRAME_BUFFER_INDEX"
 #define PE_ImageNumberString                "PE_IMAGE_NUMBER"
 #define PE_SkipFramesString                 "PE_SKIP_FRAMES"
