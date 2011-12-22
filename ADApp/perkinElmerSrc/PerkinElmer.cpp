@@ -52,7 +52,6 @@ PerkinElmer::PerkinElmer(const char *portName, int maxBuffers,
   /* Add parameters for this driver */
   createParam(PE_SystemIDString,                    asynParamInt32,   &PE_SystemID);
   createParam(PE_InitializeString,                  asynParamInt32,   &PE_Initialize);
-  createParam(PE_StatusRBVString,                   asynParamInt32,   &PE_StatusRBV);
   createParam(PE_AcquireOffsetString,               asynParamInt32,   &PE_AcquireOffset);
   createParam(PE_NumOffsetFramesString,             asynParamInt32,   &PE_NumOffsetFrames);
   createParam(PE_CurrentOffsetFrameString,          asynParamInt32,   &PE_CurrentOffsetFrame);
@@ -65,26 +64,19 @@ PerkinElmer::PerkinElmer(const char *portName, int maxBuffers,
   createParam(PE_GainAvailableString,               asynParamInt32,   &PE_GainAvailable);
   createParam(PE_PixelCorrectionAvailableString,    asynParamInt32,   &PE_PixelCorrectionAvailable);
   createParam(PE_GainString,                        asynParamInt32,   &PE_Gain);
-  createParam(PE_GainRBVString,                     asynParamInt32,   &PE_GainRBV);
   createParam(PE_DwellTimeString,                   asynParamInt32,   &PE_DwellTime);
-  createParam(PE_DwellTimeRBVString,                asynParamInt32,   &PE_DwellTimeRBV);
   createParam(PE_NumFrameBuffersString,             asynParamInt32,   &PE_NumFrameBuffers);
-  createParam(PE_NumFrameBuffersRBVString,          asynParamInt32,   &PE_NumFrameBuffersRBV);
-  createParam(PE_SyncModeString,                    asynParamInt32,   &PE_SyncMode);
-  createParam(PE_SyncModeRBVString,                 asynParamInt32,   &PE_SyncModeRBV);
   createParam(PE_TriggerString,                     asynParamInt32,   &PE_Trigger);
   createParam(PE_SyncTimeString,                    asynParamInt32,   &PE_SyncTime);
-  createParam(PE_SyncTimeRBVString,                 asynParamInt32,   &PE_SyncTimeRBV);
   createParam(PE_UsePixelCorrectionString,          asynParamInt32,   &PE_UsePixelCorrection);
   createParam(PE_LoadCorrectionFilesString,         asynParamInt32,   &PE_LoadCorrectionFiles);
   createParam(PE_SaveCorrectionFilesString,         asynParamInt32,   &PE_SaveCorrectionFiles);
   createParam(PE_PixelCorrectionFileString,         asynParamOctet,   &PE_PixelCorrectionFile);
-  createParam(PE_PixelCorrectionFileRBVString,      asynParamOctet,   &PE_PixelCorrectionFileRBV);
   createParam(PE_CorrectionsDirectoryString,        asynParamOctet,   &PE_CorrectionsDirectory);
   createParam(PE_FrameBufferIndexString,            asynParamInt32,   &PE_FrameBufferIndex);
   createParam(PE_ImageNumberString,                 asynParamInt32,   &PE_ImageNumber);
-  createParam(PE_SkipLeadingPulsesString,           asynParamInt32,   &PE_SkipLeadingPulses);
-  createParam(PE_NumPulsesToSkipString,             asynParamInt32,   &PE_NumPulsesToSkip);
+  createParam(PE_SkipFramesString,                  asynParamInt32,   &PE_SkipFrames);
+  createParam(PE_NumFramesToSkipString,             asynParamInt32,   &PE_NumFramesToSkip);
 
   /* Set some default values for parameters */
   status =  setStringParam (ADManufacturer, "Perkin Elmer");
@@ -94,25 +86,20 @@ PerkinElmer::PerkinElmer(const char *portName, int maxBuffers,
 
   //Detector parameter defaults
   status |= setIntegerParam(PE_NumFrameBuffers, 10);
-  status |= setIntegerParam(PE_NumFrameBuffersRBV, 10);
   status |= setIntegerParam(PE_Gain, 0);
   status |= setIntegerParam(PE_DwellTime, 0);
   status |= setIntegerParam(PE_SyncTime, 100);
   status |= setIntegerParam(PE_SystemID, 0);
   status |= setIntegerParam(PE_Initialize, 0);
-  status |= setIntegerParam(PE_StatusRBV, PE_STATUS_OK);
   status |= setIntegerParam(PE_AcquireOffset, 0);
   status |= setIntegerParam(PE_OffsetAvailable, NOT_AVAILABLE);
   status |= setIntegerParam(PE_AcquireGain, 0);
   status |= setIntegerParam(PE_GainAvailable, NOT_AVAILABLE);
-  status |= setIntegerParam(PE_GainRBV, 0);
-  status |= setIntegerParam(PE_DwellTimeRBV, 0);
-  status |= setIntegerParam(PE_SyncModeRBV, PE_INTERNAL_TRIGGER);
-  status |= setStringParam (PE_PixelCorrectionFileRBV, "none");
   status |= setIntegerParam(PE_PixelCorrectionAvailable, NOT_AVAILABLE);
-  status |= setStringParam (PE_CorrectionsDirectory, "none");
-  status |= setIntegerParam (PE_FrameBufferIndex, 0);
-  status |= setIntegerParam (PE_ImageNumber, 0);
+  status |= setStringParam (PE_CorrectionsDirectory, "");
+  status |= setStringParam (PE_PixelCorrectionFile, "");
+  status |= setIntegerParam(PE_FrameBufferIndex, 0);
+  status |= setIntegerParam(PE_ImageNumber, 0);
   if (status) {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
     "%s:%s: unable to set camera parameters\n", 
@@ -192,7 +179,7 @@ bool PerkinElmer::initializeDetector(void)
     "%s:%s: Attempting to initialize PE detector...\n",
     driverName, functionName);
 
-  status |= setIntegerParam(PE_StatusRBV, PE_STATUS_INITIALIZING);
+  status |= setIntegerParam(ADStatus, ADStatusInitializing);
   callParamCallbacks();
 
   status |= getIntegerParam(PE_NumFrameBuffers, (int *)&uiNumFrameBuffers_);
@@ -378,10 +365,10 @@ bool PerkinElmer::initializeDetector(void)
   status |= setIntegerParam(NDArraySizeX, uiColumns_);
   status |= setIntegerParam(NDArraySizeY, uiRows_);
   status |= setIntegerParam(PE_SystemID, dwSystemID_);
-  status |= setIntegerParam(PE_StatusRBV, PE_STATUS_OK);
-  status |= setIntegerParam(PE_GainRBV, iGain);
-  status |= setIntegerParam(PE_DwellTimeRBV, iTimeIndex);
-  status |= setIntegerParam(PE_NumFrameBuffersRBV, uiNumFrameBuffers_);
+  status |= setIntegerParam(PE_Gain, iGain);
+  status |= setIntegerParam(PE_DwellTime, iTimeIndex);
+  status |= setIntegerParam(PE_NumFrameBuffers, uiNumFrameBuffers_);
+  status |= setIntegerParam(ADStatus, ADStatusIdle);
 //    status |= setIntegerParam(ADTriggerMode, iSyncMode);
 //    status |= setIntegerParam(PE_SyncTimeRBV, dwDwellTime);
 
@@ -395,14 +382,18 @@ void PerkinElmer::setBinning(void)
 {
   unsigned int uiPEResult;
   int binX, binY, sizeX, sizeY;
+  int status;
   bool validBinning = true;
   WORD PEBinning;
   int averageBinning = 256;
   int accumulateBinning = 512;
   static const char *functionName = "setBinning";
 
-  getIntegerParam(ADBinX, &binX);
-  getIntegerParam(ADBinY, &binY);
+  status = getIntegerParam(ADBinX, &binX);
+  status |= getIntegerParam(ADBinY, &binY);
+  // If either binning is not defined return because it has not yet
+  // been initialized, but we will be called again when it is.
+  if (status) return;
   getIntegerParam(ADMaxSizeX, &sizeX);
   getIntegerParam(ADMaxSizeY, &sizeY);
 
@@ -830,7 +821,6 @@ void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
       /* raise a flag to the user if offset data is available */
       if (pOffsetBuffer_ != NULL) {
         setIntegerParam(PE_OffsetAvailable, AVAILABLE);
-        setIntegerParam(PE_StatusRBV, PE_STATUS_OK);
       }
       break;
 
@@ -839,7 +829,6 @@ void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
     /* raise a flag to the user if gain data is available */
     if (pGainBuffer_ != NULL) {
       setIntegerParam(PE_GainAvailable, AVAILABLE);
-      setIntegerParam(PE_StatusRBV, PE_STATUS_OK);
     }
     break;
     
@@ -1017,6 +1006,47 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 }
 
 //_____________________________________________________________________________________________
+/** Called when asyn clients call pasynOctet->write().
+  * This function performs actions for some parameters, including PilatusBadPixelFile, ADFilePath, etc.
+  * For all parameters it sets the value in the parameter library and calls any registered callbacks..
+  * \param[in] pasynUser pasynUser structure that encodes the reason and address.
+  * \param[in] value Address of the string to write.
+  * \param[in] nChars Number of characters to write.
+  * \param[out] nActual Number of characters actually written. */
+asynStatus PerkinElmer::writeOctet(asynUser *pasynUser, const char *value, 
+                                   size_t nChars, size_t *nActual)
+{
+  int function = pasynUser->reason;
+  asynStatus status = asynSuccess;
+  const char *functionName = "writeOctet";
+
+  /* Set the parameter in the parameter library. */
+  setStringParam(function, (char *)value);
+
+  if ((function == PE_PixelCorrectionFile) ||
+      (function == PE_CorrectionsDirectory )) {
+      status = readPixelCorrectionFile();
+  } else {
+    /* If this parameter belongs to a base class call its method */
+    if (function < PE_FIRST_PARAM) status = ADDriver::writeOctet(pasynUser, value, nChars, nActual);
+  }
+
+   /* Do callbacks so higher layers see any changes */
+  callParamCallbacks();
+
+  if (status) 
+    epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize, 
+      "%s:%s: status=%d, function=%d, value=%s", 
+      driverName, functionName, status, function, value);
+  else        
+    asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
+      "%s:%s: function=%d, value=%s\n", 
+      driverName, functionName, function, value);
+  *nActual = nChars;
+  return status;
+}
+
+//_____________________________________________________________________________________________
 
 void PerkinElmer::acquireStart(void)
 {
@@ -1026,19 +1056,19 @@ void PerkinElmer::acquireStart(void)
   unsigned int uiPEResult;
   DWORD   HISError;
   DWORD   FGError;
-  int     skipLeadingImages;
-  int     numLeadingImagesToSkip = 0;
+  int     skipFrames;
+  int     numFramesToSkip = 0;
   static const char *functionName = "acquireStart";
 
   //get some information
   getIntegerParam(ADImageMode, &iMode);
-  getIntegerParam(PE_SkipLeadingPulses, &skipLeadingImages);
+  getIntegerParam(PE_SkipFrames, &skipFrames);
 
-  if (skipLeadingImages !=0) {
-    status |= getIntegerParam(PE_NumPulsesToSkip, &numLeadingImagesToSkip);
+  if (skipFrames !=0) {
+    status |= getIntegerParam(PE_NumFramesToSkip, &numFramesToSkip);
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-      "%s:%s: Skipping Leading %d images\n", 
-      driverName, functionName, numLeadingImagesToSkip );
+      "%s:%s: Skipping %d frames\n", 
+      driverName, functionName, numFramesToSkip );
     }
 
   switch(iMode)
@@ -1076,16 +1106,16 @@ void PerkinElmer::acquireStart(void)
   Acquisition_SetReady(hAcqDesc_, 1);
   switch (iMode) {
     case PEImageSingle:
-      uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames + numLeadingImagesToSkip, numLeadingImagesToSkip,
+      uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames, numFramesToSkip,
                                              HIS_SEQ_ONE_BUFFER, NULL, NULL, NULL);
       break;
     case PEImageMultiple:
     case PEImageContinuous:
-      uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames, numLeadingImagesToSkip,
+      uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames, numFramesToSkip,
                                              HIS_SEQ_CONTINUOUS, NULL, NULL, NULL);
       break;
     case PEImageAverage:
-      uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames, numLeadingImagesToSkip,
+      uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames, numFramesToSkip,
                                              HIS_SEQ_AVERAGE, NULL, NULL, NULL);
       break;
   }
@@ -1241,8 +1271,8 @@ void PerkinElmer::saveCorrectionFiles(void)
     driverName, functionName);
 
   status |= getStringParam(PE_CorrectionsDirectory, sizeof(cpCorrectionsDirectory), cpCorrectionsDirectory);
-  status |= getIntegerParam(PE_GainRBV, &iGainIndex);
-  status |= getIntegerParam(PE_DwellTimeRBV, &iTimeIndex);
+  status |= getIntegerParam(PE_Gain, &iGainIndex);
+  status |= getIntegerParam(PE_DwellTime, &iTimeIndex);
   status |= getIntegerParam(NDArraySizeX, &iSizeX);
   status |= getIntegerParam(NDArraySizeY, &iSizeY);
 
@@ -1366,7 +1396,6 @@ void PerkinElmer::loadCorrectionFiles (void)
   int iByteDepth;
   int status = asynSuccess;
   char cpCorrectionsDirectory[256];
-  char cpPixelCorrectionFile[256];
   char cpFileName[256];
   char cpGain[10];
   char cpTime[10];
@@ -1379,9 +1408,8 @@ void PerkinElmer::loadCorrectionFiles (void)
     driverName, functionName);
 
   status |= getStringParam(PE_CorrectionsDirectory, sizeof(cpCorrectionsDirectory), cpCorrectionsDirectory);
-  status |= getStringParam(PE_PixelCorrectionFile, sizeof(cpPixelCorrectionFile), cpPixelCorrectionFile);
-  status |= getIntegerParam(PE_GainRBV, &iGainIndex);
-  status |= getIntegerParam(PE_DwellTimeRBV, &iTimeIndex);
+  status |= getIntegerParam(PE_Gain, &iGainIndex);
+  status |= getIntegerParam(PE_DwellTime, &iTimeIndex);
   status |= getIntegerParam(NDArraySizeX, &iSizeX);
   status |= getIntegerParam(NDArraySizeY, &iSizeY);
 
@@ -1506,20 +1534,6 @@ void PerkinElmer::loadCorrectionFiles (void)
       driverName, functionName,  cpTime, cpGain);
 
 
-  //load pixel correction file
-  sprintf (cpFileName, "%s%s", cpCorrectionsDirectory, cpPixelCorrectionFile);
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-    "%s:%s:, Pixel correction file name: %s\n",
-    driverName, functionName, cpFileName);
-  if ((stat (cpFileName, &stat_buffer) == 0) && (stat_buffer.st_mode & S_IFREG))
-  {
-    status |= setStringParam (PE_PixelCorrectionFileRBV, cpPixelCorrectionFile);
-    readPixelCorrectionFile (cpFileName);
-  }
-  else
-    status |= setStringParam (PE_PixelCorrectionFileRBV, "none");
-
-
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
     "%s:%s:, Correction files loaded\n",
     driverName, functionName, cpFileName);
@@ -1528,93 +1542,118 @@ void PerkinElmer::loadCorrectionFiles (void)
 
 //_____________________________________________________________________________________________
 
-void PerkinElmer::readPixelCorrectionFile (char *pixel_correction_file)
+asynStatus PerkinElmer::readPixelCorrectionFile()
 {
   FILE                *pInputFile;
   WinHeaderType       file_header;
   WinImageHeaderType  image_header;
   int                 iBufferSize;
   int                 iCorrectionMapSize;
-  int                 status = asynSuccess;
   unsigned int        uiStatus;
+  char                pixelCorrectionFile[256];
+  char                pixelCorrectionPath[256];
+  struct              stat stat_buffer;
   static const char   *functionName = "readPixelCorrectionFile";
+  
+  setIntegerParam(PE_PixelCorrectionAvailable, NOT_AVAILABLE);
 
-  pInputFile = fopen (pixel_correction_file, "r");
-
-  if (pInputFile != NULL)
-  {
-    //read file header
-    fread ((void *) &file_header, 68, 1, pInputFile);
-    if (ferror (pInputFile))
-    {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-        "%s:%s: Failed to read file header from file %s\n", 
-        driverName, functionName, pixel_correction_file);
-      return;
-    }
-
-    //read image header
-    fread ((void *) &image_header, 32, 1, pInputFile);
-    if (ferror (pInputFile))
-    {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-        "%s:%s: Failed to read image header from file %s\n", 
-        driverName, functionName, pixel_correction_file);
-      return;
-    }
-
-    //read bad pixel map
-    if (pBadPixelMap_ != NULL)
-      free (pBadPixelMap_);
-    iBufferSize = file_header.ULY * file_header.BRX * sizeof (epicsUInt16);
-    pBadPixelMap_ = (epicsUInt16 *) malloc (iBufferSize);
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-      "%s:%s: buffer size: %d, pBadPixelMap: %d\n", 
-      driverName, functionName, iBufferSize, pBadPixelMap_);
-    if (pBadPixelMap_ == NULL)
-    {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-        "%s:%s: Failed to allocate bad pixel map buffer\n", 
-        driverName, functionName);
-      return;
-    }
-    fread ((void *) pBadPixelMap_, iBufferSize, 1, pInputFile);
-    if (ferror (pInputFile))
-    {
-      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-        "%s:%s: Failed to read bad pixel map from file %s\n", 
-        driverName, functionName, pixel_correction_file);
-      return;
-    }
-
-    fclose (pInputFile);
-
-    int counter = 0;
-    for (int loop=0;loop<file_header.ULY * file_header.BRX;loop++)
-    {
-      if (pBadPixelMap_[loop] == 65535)
-        counter++;
-    }
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-      "%s:%s: Bad pixel map read in: %d bad pixels found\n", 
-      driverName, functionName, counter);
-
-    //first call with correction list = NULL returns size of buffer to allocate
-    //second time gets the correction list
-    uiStatus = Acquisition_CreatePixelMap (pBadPixelMap_, file_header.ULY, file_header.BRX, NULL, &iCorrectionMapSize);
-    pPixelCorrectionList_ = (int *) malloc (iCorrectionMapSize);
-    uiStatus = Acquisition_CreatePixelMap (pBadPixelMap_, file_header.ULY, file_header.BRX, pPixelCorrectionList_, &iCorrectionMapSize);
-
-    free (pBadPixelMap_);
-
-    status |= setIntegerParam(PE_PixelCorrectionAvailable, AVAILABLE);
-    callParamCallbacks();
-  }
-  else
+  // If either the file or path are null strings then return success because this usually
+  // happens in iocInit because one record processes before the other.
+  getStringParam(PE_PixelCorrectionFile, sizeof(pixelCorrectionFile), pixelCorrectionFile);
+  if (strlen(pixelCorrectionFile) == 0) return asynSuccess;
+  getStringParam(PE_CorrectionsDirectory, sizeof(pixelCorrectionPath), pixelCorrectionPath);
+  if (strlen(pixelCorrectionPath) == 0) return asynSuccess;
+  strcat(pixelCorrectionPath, pixelCorrectionFile);
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+    "%s:%s:, Pixel correction file name: %s\n",
+    driverName, functionName, pixelCorrectionPath);
+  if ((stat (pixelCorrectionPath, &stat_buffer) != 0) || (stat_buffer.st_mode & S_IFREG) == 0) {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-      "%s:%s: Failed to open file %s\n", 
-      driverName, functionName, pixel_correction_file);
+      "%s:%s: error opening pixel correction file %s\n",
+      driverName, functionName, pixelCorrectionPath);
+    return asynError;
+  }
+  
+  pInputFile = fopen(pixelCorrectionPath, "r");
 
+  if (pInputFile == NULL)
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+    "%s:%s: Failed to open file %s\n", 
+    driverName, functionName, pixelCorrectionPath);
+    return asynError;
+  }
+
+  //read file header
+  fread((void *) &file_header, 68, 1, pInputFile);
+  if (ferror(pInputFile))
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Failed to read file header from file %s\n", 
+      driverName, functionName, pixelCorrectionPath);
+    return asynError;
+  }
+
+
+  //read image header
+  fread((void *) &image_header, 32, 1, pInputFile);
+  if (ferror (pInputFile))
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Failed to read image header from file %s\n", 
+      driverName, functionName, pixelCorrectionPath);
+    return asynError;
+  }
+
+  //read bad pixel map
+  if (pBadPixelMap_ != NULL)
+    free (pBadPixelMap_);
+  iBufferSize = file_header.ULY * file_header.BRX * sizeof (epicsUInt16);
+  pBadPixelMap_ = (epicsUInt16 *) malloc (iBufferSize);
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+    "%s:%s: buffer size: %d, pBadPixelMap: %d\n", 
+    driverName, functionName, iBufferSize, pBadPixelMap_);
+  if (pBadPixelMap_ == NULL)
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Failed to allocate bad pixel map buffer\n", 
+      driverName, functionName);
+    return asynError;
+  }
+  fread ((void *) pBadPixelMap_, iBufferSize, 1, pInputFile);
+  if (ferror (pInputFile))
+  {
+    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+      "%s:%s: Failed to read bad pixel map from file %s\n", 
+      driverName, functionName, pixelCorrectionPath);
+    free (pBadPixelMap_);
+    pBadPixelMap_ = NULL;
+    return asynError;
+  }
+
+  fclose (pInputFile);
+
+  int counter = 0;
+  for (int loop=0;loop<file_header.ULY * file_header.BRX;loop++)
+  {
+    if (pBadPixelMap_[loop] == 65535)
+      counter++;
+  }
+  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+    "%s:%s: Bad pixel map read in: %d bad pixels found\n", 
+    driverName, functionName, counter);
+
+  //first call with correction list = NULL returns size of buffer to allocate
+  //second time gets the correction list
+  uiStatus = Acquisition_CreatePixelMap (pBadPixelMap_, file_header.ULY, file_header.BRX, NULL, &iCorrectionMapSize);
+  pPixelCorrectionList_ = (int *) malloc (iCorrectionMapSize);
+  uiStatus = Acquisition_CreatePixelMap (pBadPixelMap_, file_header.ULY, file_header.BRX, pPixelCorrectionList_, &iCorrectionMapSize);
+
+  free (pBadPixelMap_);
+  pBadPixelMap_ = NULL;
+
+  setIntegerParam(PE_PixelCorrectionAvailable, AVAILABLE);
+  return asynSuccess;
 }
 
 //-------------------------------------------------------------
