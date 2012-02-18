@@ -1,7 +1,9 @@
  /* PerkinElmer.cpp
  *
- * This is a driver the PerkinElmer Image Plates
- *        Models:    XRD0820
+ * This is a driver for the Perkin Elmer flat panel detectors
+ *
+ * It works with panels that are connected with frame grabbers (e.g. 0820, 1621) or
+ * Gigabit Ethernet (e.g. 0822).
  *
  *
  * Author: Brian Tieman
@@ -11,6 +13,9 @@
  * Modified by John Hammonds
  *
  * Current author: Mark Rivers
+ * 
+ * Major re-write done in late 2011 and early 2012 to support many new features
+ * and improve performance.
  */
 
 #include "PerkinElmer.h"
@@ -542,30 +547,27 @@ void PerkinElmer::reportSensors(FILE *fp, int details)
   unsigned int uiPEResult;
   unsigned int uiChannelType, uiRows, uiColumns, uiDataType, uiSortFlags;
   int iChannelNum, iFrames;
+  long numGbIFSensors;
+  int i;
+  GBIF_DEVICE_PARAM *pGbIFDeviceParam;
   BOOL bEnableIRQ;
   DWORD dwAcqType, dwSystemID, dwSyncMode, dwHwAccess;
   HACQDESC  hAcqDesc;
   
-//  uiPEResult = Acquisition_EnumSensors(&uiNumSensors, bEnableIRQ_, bInitAlways_);
-// if (uiPEResult != HIS_ALL_OK)
-//    fprintf(fp, "  Error: %d  EnumSensors failed!\n", uiPEResult);
-//
-//  fprintf(fp, "  %d sensors recognized!\n", uiNumSensors);
-
-  // Now we iterate through all this sensors and display sensor data
+  fprintf(fp, "Total sensors in system: %d\n", uiNumSensors_);
+  // Iterate through all this sensors and display sensor data
   do
   {
     if ((uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc)) != HIS_ALL_OK)
       fprintf(fp, "  Error: %d  GetNextSensor failed!\n", uiPEResult);
 
-    fprintf(fp, "Total sensors in system: %d\n", uiNumSensors_);
     fprintf(fp, "  Sensor %d\n", Pos);
 
     // Ask for communication device type and its number
     if ((uiPEResult = Acquisition_GetCommChannel(hAcqDesc, &uiChannelType, &iChannelNum)) != HIS_ALL_OK)
       fprintf(fp, "    Error: %d  GetCommChannel failed!\n", uiPEResult);
 
-    // Ask for data organization of all sensors
+    // Ask for data organization
     if ((uiPEResult=Acquisition_GetConfiguration(hAcqDesc, (unsigned int *) &iFrames, &uiRows, &uiColumns, &uiDataType,
         &uiSortFlags, &bEnableIRQ, &dwAcqType, &dwSystemID, &dwSyncMode, &dwHwAccess)) != HIS_ALL_OK)
       fprintf(fp, "    Error: %d GetConfiguration failed!\n", uiPEResult);
@@ -584,6 +586,30 @@ void PerkinElmer::reportSensors(FILE *fp, int details)
     fprintf(fp, "    Hardware access:  %d\n", dwHwAccess);
 
   } while (Pos!=0);
+  
+  if ((uiPEResult = Acquisition_GbIF_GetDeviceCnt(&numGbIFSensors)) != HIS_ALL_OK)
+    fprintf(fp, "  Error: %d  GbIF_GetDeviceCnt failed!\n", uiPEResult);
+  if (numGbIFSensors <= 0) return;
+  
+  pGbIFDeviceParam = (GBIF_DEVICE_PARAM *)calloc(numGbIFSensors, sizeof(GBIF_DEVICE_PARAM));
+  if ((uiPEResult = Acquisition_GbIF_GetDeviceList(pGbIFDeviceParam, numGbIFSensors)) != HIS_ALL_OK)
+    fprintf(fp, "  Error: %d  GbIF_GetDeviceList failed!\n", uiPEResult);
+  
+  fprintf(fp, "Total GPIB sensors in system: %d\n", numGbIFSensors);
+  for (i=0; i<numGbIFSensors; i++) {
+    fprintf(fp, "  GbIF Sensor %d\n", i+1);
+    fprintf(fp, "    MAC address:     %s\n", pGbIFDeviceParam[i].ucMacAddress);
+    fprintf(fp, "    IP address:      %s\n", pGbIFDeviceParam[i].ucIP);
+    fprintf(fp, "    Subnet mask:     %s\n", pGbIFDeviceParam[i].ucSubnetMask);
+    fprintf(fp, "    Gateway:         %s\n", pGbIFDeviceParam[i].ucGateway);
+    fprintf(fp, "    Adapter IP:      %s\n", pGbIFDeviceParam[i].ucAdapterIP);
+    fprintf(fp, "    Adapter mask:    %s\n", pGbIFDeviceParam[i].ucAdapterMask);
+    fprintf(fp, "    Boot options:    %d\n", pGbIFDeviceParam[i].dwIPCurrentBootOptions);
+    fprintf(fp, "    Manufacturer:    %s\n", pGbIFDeviceParam[i].cManufacturerName);
+    fprintf(fp, "    Model:           %s\n", pGbIFDeviceParam[i].cModelName);
+    fprintf(fp, "    Firmware:        %s\n", pGbIFDeviceParam[i].cGBIFFirmwareVersion);
+    fprintf(fp, "    Device name:     %s\n", pGbIFDeviceParam[i].cDeviceName);  
+  }  
 }
 
 //_____________________________________________________________________________________________
