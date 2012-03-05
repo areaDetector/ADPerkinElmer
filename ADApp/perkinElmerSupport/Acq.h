@@ -1,6 +1,20 @@
 #ifndef _ACQUISITION_H
 #define _ACQUISITION_H
 
+//////////////////////////////////////////////////////
+// IMPORTANT:
+// When implementing the XISL dll into a .net environment some datatypes might have to be changed to to size definition:
+//
+// e.g. 
+// XISL dll: long has 4 byte
+// .net: int has 4 byte, long has 8 byte
+// so long has to be important as int
+// 
+// XISL dll: char has 1 byte
+// .net: char has 2 bytes
+//
+//////////////////////////////////////////////////////
+
 #define DATASHORT               2 //2 byte integer
 #define DATALONG                4 //4 byte integer
 #define DATAFLOAT               8 //8 byte double
@@ -304,16 +318,16 @@ HIS_RETURN Acquisition_GbIF_Init(					HACQDESC *phAcqDesc,
 													UINT uiRows, UINT uiColumns, 
 													BOOL bSelfInit, BOOL bAlwaysOpen,
 													long lInitType, 
-													GBIF_STRING_DATATYPE* cAddress
+													GBIF_STRING_DATATYPE* ucAddress
 												  );
 
 HIS_RETURN Acquisition_GbIF_GetDeviceList(GBIF_DEVICE_PARAM* pGBIF_DEVICE_PARAM, int nDeviceCnt);
 HIS_RETURN Acquisition_GbIF_GetDevice(GBIF_STRING_DATATYPE* ucAddress, DWORD dwAddressType, GBIF_DEVICE_PARAM* pDevice);
 HIS_RETURN Acquisition_GbIF_GetDeviceCnt(long* plNrOfboards);
 
-HIS_RETURN Acquisition_UploadPKIFirmware(			GBIF_STRING_DATATYPE* cMacAddress,
-													void* pBitStream, long lBitStreamLength
-										);
+//HIS_RETURN Acquisition_GbIF_UploadPKIFirmware(			GBIF_STRING_DATATYPE* cMacAddress,
+//													void* pBitStream, long lBitStreamLength
+//										);
 
 HIS_RETURN Acquisition_GbIF_SetConnectionSettings(	GBIF_STRING_DATATYPE* cMAC,
 													unsigned long ulBootOptions,
@@ -342,6 +356,9 @@ HIS_RETURN Acquisition_GbIF_ForceIP(				GBIF_STRING_DATATYPE* cMAC,
 													GBIF_STRING_DATATYPE* cDefSubNetMask,
 													GBIF_STRING_DATATYPE* cStdGateway
 									);
+
+HIS_RETURN Acquisition_GbIF_GetFilterDrvState(		HACQDESC hAcqDesc
+											  );
 
 HIS_RETURN Acquisition_GbIF_CheckNetworkSpeed(	HACQDESC hAcqDesc, WORD* wTiming, long* lPacketDelay, long lMaxNetworkLoadPercent);
 HIS_RETURN Acquisition_GbIF_GetDetectorProperties(HACQDESC hAcqDesc, GBIF_Detector_Properties* pDetectorProperties);
@@ -447,6 +464,7 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 #define HIS_SORT_HEX_TILE_INVERSE			11		//	1621 ADIC
 #define HIS_SORT_HEX_CS						12		//	1620/1640 continous scan
 #define HIS_SORT_12x1						13		//	12X1 Combo
+#define HIS_SORT_14							14		//	
 
 
 //sequence acquisition options
@@ -481,5 +499,54 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 #define HIS_BOARD_TYPE_ELTEC_GbIF				0x20
 
 #define HIS_MAX_TIMINGS							0x8
+
+
+/// detector supported options
+#define XIS_DETECTOR_SERVICE_MODE_AVAILABLE		0x1 
+#define XIS_DETECTOR_TRIGGER_SOURCE_SELECTABLE	0x2
+#define XIS_DETECTOR_SUPPORTS_PING				0x3
+#define XIS_DETECTOR_SUPPORTED_ROI_MODES		0x4
+#define XIS_DETECTOR_SUPPORTED_BINNING_MODES	0x5
+#define XIS_DETECTOR_SUPPORTS_GAIN_CHANGE		0x6
+#define XIS_DETECTOR_SUPPORTS_MULTIPLE_TRIGGER_MODES	0x7
+#define XIS_DETECTOR_SUPPORTS_CONFIGURABLE_TRIGGER_OUT	0x8
+#define XIS_DETECTOR_GRPSIZE_ROI_Y				0x9
+
+
+//Grps 1&2&3&4, 3&4, 2&3, 1&2 ,4, 3, 2, 1
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_1			0x1
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_2			0x2
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_3			0x4
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_4			0x8
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_5			0x10 // val 2011-11-14 1642
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_6			0x20 // val 2011-11-14 1642
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_7			0x40 // val 2011-11-14 1642
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_8			0x80 // val 2011-11-14 1642
+
+#define XIS_DETECTOR_PROVIDES_ROI_1_GRP			0x1
+#define XIS_DETECTOR_PROVIDES_ROI_2_GRPS		0x2
+#define XIS_DETECTOR_PROVIDES_ROI_3_GRPS		0x4
+#define XIS_DETECTOR_PROVIDES_ROI_4_GRPS		0x8
+#define XIS_DETECTOR_PROVIDES_ROI_ALL_GRPS		0x1000
+
+
+/*
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_1_2		0x10
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_2_3		0x20
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_3_4		0x40
+#define XIS_DETECTOR_PROVIDES_ROI_GRP_1_2_3_4	0x80
+*/
+// BINNING MODES
+#define XIS_DETECTOR_PROVIDES_BINNING_1x1		0x1
+#define XIS_DETECTOR_PROVIDES_BINNING_2x2		0x2
+#define XIS_DETECTOR_PROVIDES_BINNING_4x4		0x4
+#define XIS_DETECTOR_PROVIDES_BINNING_1x2		0x8
+#define XIS_DETECTOR_PROVIDES_BINNING_1x4		0x10
+
+#define XIS_DETECTOR_PROVIDES_BINNING_AVG		0x100
+#define XIS_DETECTOR_PROVIDES_BINNING_SUM		0x200
+// AVG bit 8
+// SUM bit 9
+
 
 #endif	//_ACQUISITION_H
