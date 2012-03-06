@@ -14,7 +14,7 @@ epicsEnvSet("NCHANS", "2048")
 
 # Create a PerkinElmer driver
 # PerkinElmerConfig(const char *portName, IDType, IDValue, maxBuffers, size_t maxMemory, int priority, int stackSize)
-# IDType = 0 Frame grabber card, IDValue="", use first 
+# IDType = 0 Frame grabber card, IDValue="", use first frame grabber or directly connected GigE detector
 #        = 1 GigE detector by IP address (e.g. 164.54.160.21)
 #        = 2 GigE detector by MAC address (e.g. 00005b032e6b, must be lower-case letters)
 #        = 3 GigE detector by detector name (e.g. 8#2608).  Can get network detector names with asynReport(10)
