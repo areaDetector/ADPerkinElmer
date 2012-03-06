@@ -28,17 +28,17 @@ static void exitCallbackC(void *drvPvt);
 
 //_____________________________________________________________________________________________
 
-extern "C" int PerkinElmerConfig(const char *portName, int maxBuffers, size_t maxMemory,
-                                 int priority, int stackSize )
+extern "C" int PerkinElmerConfig(const char *portName, int IDType, const char *IDValue,
+                                 int maxBuffers, size_t maxMemory, int priority, int stackSize)
 {
-    new PerkinElmer(portName, maxBuffers, maxMemory, priority, stackSize);
+    new PerkinElmer(portName, IDType, IDValue, maxBuffers, maxMemory, priority, stackSize);
     return(asynSuccess);
 }
 
 //_____________________________________________________________________________________________
 /** Constructor for this driver */
-PerkinElmer::PerkinElmer(const char *portName, int maxBuffers,
-                         size_t maxMemory, int priority, int stackSize)
+PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
+                         int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
     : ADDriver(portName, 1, (int)NUM_PERKIN_ELMER_PARAMS, maxBuffers, maxMemory, 0, 0, ASYN_CANBLOCK, 1, priority, stackSize)
 {
@@ -50,9 +50,9 @@ PerkinElmer::PerkinElmer(const char *portName, int maxBuffers,
   pGainBuffer_          = NULL;
   pBadPixelMap_         = NULL;
   pPixelCorrectionList_ = NULL;
-
-  bEnableIRQ_           = true;
-  bInitAlways_          = false;
+  
+  IDType_  = IDType;
+  IDValue_ = epicsStrDup(IDValue);
 
   /* Add parameters for this driver */
   createParam(PE_SystemIDString,                    asynParamInt32,   &PE_SystemID);
@@ -178,9 +178,13 @@ bool PerkinElmer::initializeDetector(void)
   int status = asynSuccess;
   int iGain;
   int iTimeIndex;
+  long lPacketDelay;
   int iSyncMode;
+  WORD wTiming;
   unsigned int uiPEResult;
   DWORD dwSyncTime;
+  bool bInitAlways = false;
+  BOOL bSelfInit = true;
   static const char* functionName = "initializeDetector";
 
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
@@ -201,26 +205,79 @@ bool PerkinElmer::initializeDetector(void)
               "%s:%s: error getting parameters\n",
               driverName, functionName);
 
-  uiPEResult = Acquisition_EnumSensors(&uiNumSensors_, bEnableIRQ_, bInitAlways_);
-  if (uiPEResult != HIS_ALL_OK)
-  {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-      "%s:%s: Error: %d  EnumSensors failed!\n", 
-      driverName, functionName, uiPEResult);
-    return false;
-  }
-  asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-    "%s:%s: Total of %d sensors found. This driver will only control the first enumerated sensor.\n",
-    driverName, functionName, uiNumSensors_);
+  bEnableIRQ_ = true;
+  switch (IDType_) {
+    case 0:
+      uiPEResult = Acquisition_EnumSensors(&uiNumSensors_, bEnableIRQ_, bInitAlways);
+      if (uiPEResult != HIS_ALL_OK)
+      {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+          "%s:%s: Error: %d  EnumSensors failed!\n", 
+          driverName, functionName, uiPEResult);
+        return false;
+      }
+      asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
+        "%s:%s: Total of %d sensors found. This driver will only control the first frame grabber.\n",
+        driverName, functionName, uiNumSensors_);
 
-  Pos = NULL;
-  if ((uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc_)) != HIS_ALL_OK) {
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-      "%s:%s: Error: %d GetNextSensor failed!\n", 
-      driverName, functionName, uiPEResult);
-    return false;
+      Pos = NULL;
+      if ((uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc_)) != HIS_ALL_OK) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+          "%s:%s: Error: %d GetNextSensor failed!\n", 
+          driverName, functionName, uiPEResult);
+        return false;
+      }
+      break;
+    case 1:
+    case 2:
+    case 3:
+      // Open GigE detector by MAC, IP address or IP name
+      // Note the XSIZE and YSIZE in this call are not important because we set bSelfInit=true
+      uiPEResult = Acquisition_GbIF_Init(&hAcqDesc_, 0, bEnableIRQ_, 1024, 1024, 
+                                         bSelfInit, bInitAlways, IDType_, (unsigned char *)IDValue_);
+      if (uiPEResult != HIS_ALL_OK)
+      {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+          "%s:%s: Error: %d Acquisition_GbIF_Init failed!\n", 
+          driverName, functionName, uiPEResult);
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+          "  Acquisition_GbIF_Init(%p, %d, %d, %d, %d, %d, %d, %d, %s)\n",
+          &hAcqDesc_, 0, bEnableIRQ_, 1024, 1024, 
+          bSelfInit, bInitAlways, IDType_, (unsigned char *)IDValue_);
+        return false;
+      }
+      uiPEResult = Acquisition_GbIF_CheckNetworkSpeed(hAcqDesc_, &wTiming, &lPacketDelay, 100); 
+      if (uiPEResult == HIS_ALL_OK)
+      {
+        printf("%s:%s: Acquisition_GbIF_CheckNetworkSpeed, wTiming=%d, lPacketDelay=%ld\n",
+          driverName, functionName, wTiming, lPacketDelay);
+      }
+      else
+      {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+          "%s:%s: Error: %d Acquisition_GbIF_CheckNetworkSpeed failed!\n", 
+          driverName, functionName, uiPEResult);
+      }
+      uiPEResult = Acquisition_GbIF_GetPacketDelay(hAcqDesc_, &lPacketDelay); 
+      if (uiPEResult == HIS_ALL_OK)
+      {
+        printf("%s:%s: Acquisition_GbIF_GetPacketDelay, lPacketDelay=%ld\n",
+          driverName, functionName, lPacketDelay);
+      }
+      else
+      {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+          "%s:%s: Error: %d Acquisition_GbIF_GetPacketDelay failed!\n", 
+          driverName, functionName, uiPEResult);
+      }
+      break;
+    default:
+      asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+        "%s:%s: Error: unknown ID Type=%d, must be 0-3!\n", 
+        driverName, functionName);
+      return false;
   }
-
+      
   //ask for communication device type and its number
   if ((uiPEResult = Acquisition_GetCommChannel(hAcqDesc_, &uiChannelType_, &iChannelNum_)) != HIS_ALL_OK)
   {
@@ -1550,19 +1607,24 @@ asynStatus PerkinElmer::setExposureTime() {
 
 /* PerkinElmerConfig */
 static const iocshArg PerkinElmerConfigArg0 = {"Port name", iocshArgString};
-static const iocshArg PerkinElmerConfigArg1 = {"maxBuffers", iocshArgInt};
-static const iocshArg PerkinElmerConfigArg2 = {"maxMemory", iocshArgInt};
-static const iocshArg PerkinElmerConfigArg3 = {"priority", iocshArgInt};
-static const iocshArg PerkinElmerConfigArg4 = {"stackSize", iocshArgInt};
+static const iocshArg PerkinElmerConfigArg1 = {"ID type", iocshArgInt};
+static const iocshArg PerkinElmerConfigArg2 = {"ID value", iocshArgString};
+static const iocshArg PerkinElmerConfigArg3 = {"maxBuffers", iocshArgInt};
+static const iocshArg PerkinElmerConfigArg4 = {"maxMemory", iocshArgInt};
+static const iocshArg PerkinElmerConfigArg5 = {"priority", iocshArgInt};
+static const iocshArg PerkinElmerConfigArg6 = {"stackSize", iocshArgInt};
 static const iocshArg * const PerkinElmerConfigArgs[] =  {&PerkinElmerConfigArg0,
                                                           &PerkinElmerConfigArg1,
                                                           &PerkinElmerConfigArg2,
                                                           &PerkinElmerConfigArg3,
-                                                          &PerkinElmerConfigArg4};
-static const iocshFuncDef configPerkinElmer = {"PerkinElmerConfig", 5, PerkinElmerConfigArgs};
+                                                          &PerkinElmerConfigArg2,
+                                                          &PerkinElmerConfigArg3,
+                                                          &PerkinElmerConfigArg6};
+static const iocshFuncDef configPerkinElmer = {"PerkinElmerConfig", 7, PerkinElmerConfigArgs};
 static void configPerkinElmerCallFunc(const iocshArgBuf *args)
 {
-  PerkinElmerConfig(args[0].sval, args[1].ival, args[2].ival, args[3].ival, args[4].ival);
+  PerkinElmerConfig(args[0].sval, args[1].ival, args[2].sval, args[3].ival, 
+                    args[4].ival, args[5].ival, args[6].ival);
 }
 
 
