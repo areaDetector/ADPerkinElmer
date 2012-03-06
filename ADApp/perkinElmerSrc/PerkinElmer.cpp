@@ -231,7 +231,7 @@ bool PerkinElmer::initializeDetector(void)
     case 1:
     case 2:
     case 3:
-      // Open GigE detector by MAC, IP address or IP name
+      // Open GigE detector by IP address (IDType=1), MAC address (IDType_=2) or detector name (IDType_=3)
       // Note the XSIZE and YSIZE in this call are not important because we set bSelfInit=true
       uiPEResult = Acquisition_GbIF_Init(&hAcqDesc_, 0, bEnableIRQ_, 1024, 1024, 
                                          bSelfInit, bInitAlways, IDType_, (unsigned char *)IDValue_);
@@ -240,10 +240,6 @@ bool PerkinElmer::initializeDetector(void)
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
           "%s:%s: Error: %d Acquisition_GbIF_Init failed!\n", 
           driverName, functionName, uiPEResult);
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
-          "  Acquisition_GbIF_Init(%p, %d, %d, %d, %d, %d, %d, %d, %s)\n",
-          &hAcqDesc_, 0, bEnableIRQ_, 1024, 1024, 
-          bSelfInit, bInitAlways, IDType_, (unsigned char *)IDValue_);
         return false;
       }
       uiPEResult = Acquisition_GbIF_CheckNetworkSpeed(hAcqDesc_, &wTiming, &lPacketDelay, 100); 
@@ -652,7 +648,7 @@ void PerkinElmer::reportSensors(FILE *fp, int details)
   if ((uiPEResult = Acquisition_GbIF_GetDeviceList(pGbIFDeviceParam, numGbIFSensors)) != HIS_ALL_OK)
     fprintf(fp, "  Error: %d  GbIF_GetDeviceList failed!\n", uiPEResult);
   
-  fprintf(fp, "Total GPIB sensors in system: %d\n", numGbIFSensors);
+  fprintf(fp, "Total GbIF sensors in system: %d\n", numGbIFSensors);
   for (i=0; i<numGbIFSensors; i++) {
     fprintf(fp, "  GbIF Sensor %d\n", i+1);
     fprintf(fp, "    MAC address:     %s\n", pGbIFDeviceParam[i].ucMacAddress);
