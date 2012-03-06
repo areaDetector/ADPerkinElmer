@@ -17,19 +17,19 @@ epicsEnvSet("NCHANS", "2048")
 # IDType = 0 Frame grabber card, IDValue="", use first 
 #        = 1 GigE detector by IP address (e.g. 164.54.160.21)
 #        = 2 GigE detector by MAC address (e.g. 00005b032e6b, must be lower-case letters)
-#        = 3 GigE detector by IP name (e.g. gse-pe1.cars.aps.anl.gov)
+#        = 3 GigE detector by detector name (e.g. 8#2608).  Can get network detector names with asynReport(10)
 
 # This is for the first PCI/PCIExpress frame grabber detector in the system
 #PerkinElmerConfig("$(PORT)", 0, "", 100, 200000000, 0, 0)
 
-# This is for a GigE frame grabber at IP address 164.54.160.204
+# This is for a GigE detector at IP address 164.54.160.204
 #PerkinElmerConfig("$(PORT)", 1, 164.54.160.204, 100, 200000000, 0, 0)
 
-# This is for a GigE frame grabber at MAC address 00005b032e6b
-PerkinElmerConfig("$(PORT)", 2, 00005b032e6b, 100, 200000000, 0, 0)
+# This is for a GigE detector at MAC address 00005b032e6b
+#PerkinElmerConfig("$(PORT)", 2, 00005b032e6b, 100, 200000000, 0, 0)
 
-# This is for a GigE frame grabber at IP  name dhcp5.cars.aps.anl.gov
-#PerkinElmerConfig("$(PORT)", 3, DHCP5.cars.aps.anl.gov, 100, 200000000, 0, 0)
+# This is for a GigE detector with name 8#2608
+PerkinElmerConfig("$(PORT)", 3, 8#2608, 100, 200000000, 0, 0)
 
 asynSetTraceIOMask($(PORT), 0, 2)
 #asynSetTraceMask($(PORT),0,0xff)
