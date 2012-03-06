@@ -28,6 +28,21 @@ static void exitCallbackC(void *drvPvt);
 
 //_____________________________________________________________________________________________
 
+/** Configuration command for Perkin Elmer driver; creates a new PerkinElmer object.
+  * \param[in] portName The name of the asyn port driver to be created.
+  * \param[in] IDType The type of system ID being specifed in IDValue.  Allowed values are:<br/>
+  *  IDType = 0 Frame grabber card, IDValue = "" (currently always uses the first frame grabber card)<br/>
+  *  IDType = 1 GigE detector, IDValue = IP address (e.g. 164.54.160.21)<br/>
+  *  IDType = 2 GigE detector, IDValue = MAC address (e.g. 00005b032e6b, must be lower-case letters)<br/>
+  *  IDType = 3 GigE detector, IDValue = detector name (e.g. 8#2608).  Can get network detector names with asynReport(10)
+  * \param[in] IDValue The detector ID as explained above (IP name, MAC address, detector name)
+  * \param[in] maxBuffers The maximum number of NDArray buffers that the NDArrayPool for this driver is 
+  *            allowed to allocate. Set this to -1 to allow an unlimited number of buffers.
+  * \param[in] maxMemory The maximum amount of memory that the NDArrayPool for this driver is 
+  *            allowed to allocate. Set this to -1 to allow an unlimited amount of memory.
+  * \param[in] priority The thread priority for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
+  * \param[in] stackSize The stack size for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
+  */
 extern "C" int PerkinElmerConfig(const char *portName, int IDType, const char *IDValue,
                                  int maxBuffers, size_t maxMemory, int priority, int stackSize)
 {
@@ -36,7 +51,24 @@ extern "C" int PerkinElmerConfig(const char *portName, int IDType, const char *I
 }
 
 //_____________________________________________________________________________________________
-/** Constructor for this driver */
+/** Constructor for Perkin Elmer driver; most parameters are simply passed to ADDriver::ADDriver.
+  * After calling the base class constructor this method creates a thread to collect the detector data, 
+  * and sets reasonable default values the parameters defined in this class, asynNDArrayDriver, and ADDriver.
+  * \param[in] portName The name of the asyn port driver to be created.
+  * \param[in] IDType The type of system ID being specifed in IDValue.  Allowed values are:<br/>
+  *  IDType = 0 Frame grabber card, IDValue = "" (currently always uses the first frame grabber card)<br/>
+  *  IDType = 1 GigE detector, IDValue = IP address (e.g. 164.54.160.21)<br/>
+  *  IDType = 2 GigE detector, IDValue = MAC address (e.g. 00005b032e6b, must be lower-case letters)<br/>
+  *  IDType = 3 GigE detector, IDValue = detector name (e.g. 8#2608).  Can get network detector names with asynReport(10)
+  * \param[in] IDValue The detector ID as explained above (IP name, MAC address, detector name)
+  * \param[in] maxBuffers The maximum number of NDArray buffers that the NDArrayPool for this driver is 
+  *            allowed to allocate. Set this to -1 to allow an unlimited number of buffers.
+  * \param[in] maxMemory The maximum amount of memory that the NDArrayPool for this driver is 
+  *            allowed to allocate. Set this to -1 to allow an unlimited amount of memory.
+  * \param[in] priority The thread priority for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
+  * \param[in] stackSize The stack size for the asyn port driver thread if ASYN_CANBLOCK is set in asynFlags.
+  */
+
 PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
                          int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
@@ -145,6 +177,8 @@ static void exitCallbackC(void *pPvt)
 }
 
 //_____________________________________________________________________________________________
+/** Destructor for Perkin Elmer driver; most parameters are simply passed to ADDriver::ADDriver.
+ * Frees all resources and calls Acquisition_Close() */
 
 PerkinElmer::~PerkinElmer()
 {
@@ -169,6 +203,7 @@ PerkinElmer::~PerkinElmer()
 
 //_____________________________________________________________________________________________
 
+/** Connects to a detector which is specified in the IDType and IDValue parameters to the constructor */
 bool PerkinElmer::initializeDetector(void)
 {
   ACQDESCPOS Pos = 0;
@@ -439,6 +474,7 @@ bool PerkinElmer::initializeDetector(void)
 
 //_____________________________________________________________________________________________
 
+/** Configures the detector binning according to the ADBinX and ADBinY parameters */
 void PerkinElmer::setBinning(void)
 {
   unsigned int uiPEResult;
@@ -496,6 +532,12 @@ void PerkinElmer::setBinning(void)
 
 //_____________________________________________________________________________________________
 
+/** Report status of the driver.
+  * Prints details about the detector in us if details>0.
+  * Prints information about all local and network detectors if details>1.
+  * It then calls the ADDriver::report() method.
+  * \param[in] fp File pointed passed by caller where the output is written to.
+  * \param[in] details Controls the level of detail in the report. */
 void PerkinElmer::report(FILE *fp, int details)
 {
   unsigned int uiPEResult;
@@ -594,6 +636,7 @@ void PerkinElmer::report(FILE *fp, int details)
 }
 
 //_____________________________________________________________________________________________
+/** Report information about all local and network Perkin Elmer detectors */
 void PerkinElmer::reportSensors(FILE *fp, int details)
 {
   ACQDESCPOS Pos = 0;
@@ -693,6 +736,7 @@ static void CALLBACK endFrameCallbackC(HACQDESC hAcqDesc)
 }
 
 //_____________________________________________________________________________________________
+/** callback function that is called by XISL every frame at end of data transfer */
 void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
 {
   unsigned int  uiStatus;
@@ -887,6 +931,7 @@ static void CALLBACK endAcqCallbackC(HACQDESC hAcqDesc)
 
 //_____________________________________________________________________________________________
 
+/** callback function that is called by XISL at end of acquisition */
 void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
 {
   int imageMode;
@@ -934,6 +979,11 @@ void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
 
 //_____________________________________________________________________________________________
 
+/** Called when asyn clients call pasynInt32->write().
+  * This function performs actions for some parameters, including ADAcquire, ADBinX, etc.
+  * For all parameters it sets the value in the parameter library and calls any registered callbacks..
+  * \param[in] pasynUser pasynUser structure that encodes the reason and address.
+  * \param[in] value Value to write. */
 asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
   int function = pasynUser->reason;
@@ -1040,6 +1090,11 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
 
 //_____________________________________________________________________________________________
 
+/** Called when asyn clients call pasynFloat64->write().
+  * This function performs actions for some parameters.
+  * For all parameters it sets the value in the parameter library and calls any registered callbacks.
+  * \param[in] pasynUser pasynUser structure that encodes the reason and address.
+  * \param[in] value Value to write. */
 asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 {
   int function = pasynUser->reason;
@@ -1092,6 +1147,7 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 
 //_____________________________________________________________________________________________
 
+/** Starts acquisition */
 void PerkinElmer::acquireStart(void)
 {
   int     iMode;
@@ -1178,11 +1234,12 @@ void PerkinElmer::acquireStart(void)
 
 
 //_____________________________________________________________________________________________
-// acquireStop cannot directly call Acquisition_Abort because acquireStop is called from the
-// endFrameCallback function which is running in an XISL thread.  When it calls Acquisition_Abort
-// that appears to result in a deadlock, presumably because there is a second XISL thread that
-// does the abort, and it blocks waiting for the first XISL thread (deadlock). So instead
-// we run a thread whose only job is to call Acquisition_Abort on receipt of an EPICS event.
+/** Stops acquisition
+  * acquireStop cannot directly call Acquisition_Abort because acquireStop is called from the
+  * endFrameCallback function which is running in an XISL thread.  When it calls Acquisition_Abort
+  * that appears to result in a deadlock, presumably because there is a second XISL thread that
+  * does the abort, and it blocks waiting for the first XISL thread (deadlock). So instead
+  * we run a thread whose only job is to call Acquisition_Abort on receipt of an EPICS event. */
 
 void PerkinElmer::acquireStop(void)
 {
@@ -1209,6 +1266,7 @@ void PerkinElmer::acquireStopTask(void)
 
 //_____________________________________________________________________________________________
 
+/** Acquires an offset image */
 void PerkinElmer::acquireOffsetImage (void)
 {
   int iFrames;
@@ -1253,6 +1311,7 @@ void PerkinElmer::acquireOffsetImage (void)
 
 //_____________________________________________________________________________________________
 
+/** Acquires a gain image */
 void PerkinElmer::acquireGainImage(void)
 {
   int iFrames;
@@ -1295,6 +1354,7 @@ void PerkinElmer::acquireGainImage(void)
 
 //_____________________________________________________________________________________________
 
+/** Saves a gain file */
 asynStatus PerkinElmer::saveGainFile(void)
 {
   int iSizeX;
@@ -1363,6 +1423,7 @@ asynStatus PerkinElmer::saveGainFile(void)
 
 //_____________________________________________________________________________________________
 
+/** Loads a gain file */
 asynStatus PerkinElmer::loadGainFile (void)
 {
   int status = asynSuccess;
@@ -1431,6 +1492,7 @@ asynStatus PerkinElmer::loadGainFile (void)
 }
 //_____________________________________________________________________________________________
 
+/** Loads a pixel correction file */
 asynStatus PerkinElmer::loadPixelCorrectionFile()
 {
   FILE                *pInputFile;
@@ -1542,6 +1604,7 @@ asynStatus PerkinElmer::loadPixelCorrectionFile()
 }
 
 //-------------------------------------------------------------
+/** Sets the trigger mode */
 asynStatus PerkinElmer::setTriggerMode() {
   int error;
   int mode;
@@ -1575,6 +1638,7 @@ asynStatus PerkinElmer::setTriggerMode() {
 }
 
 //-------------------------------------------------------------
+/** Sets the exposure time */
 asynStatus PerkinElmer::setExposureTime() {
   DWORD dwDwellTime;
   int status = asynSuccess;
