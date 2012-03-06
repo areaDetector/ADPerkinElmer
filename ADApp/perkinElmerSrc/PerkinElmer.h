@@ -2,6 +2,7 @@
  *
  * This is a driver the PerkinElmer Image Plates
  *        Models:    XRD0820
+ *                   XRF0822
  *
  *
  * Author: Brian Tieman
@@ -135,7 +136,8 @@ class PerkinElmer;
 class PerkinElmer : public ADDriver
 {
 public:
-  PerkinElmer(const char *portName, int maxBuffers, size_t maxMemory,
+  PerkinElmer(const char *portName, int IDType, const char *IDValue, 
+              int maxBuffers, size_t maxMemory,
               int priority, int stackSize);
 
   /* These are the methods that we override from ADDriver */
@@ -184,6 +186,8 @@ protected:
 
 
 private:
+  int           IDType_;
+  char          *IDValue_;
   HACQDESC      hAcqDesc_;
   epicsEventId  acquireStopEvent_;
   epicsUInt16   *pAcqBuffer_;
@@ -196,7 +200,6 @@ private:
   int           iAcqMode_;
   // Keep a copy of parmeters for Acquistion_EnumSensors 
   unsigned int  uiNumSensors_;
-  bool          bInitAlways_;
   // Keep a copy of parmeters for Acquisition_GetCommChannel
   unsigned int  uiChannelType_;
   int           iChannelNum_;
