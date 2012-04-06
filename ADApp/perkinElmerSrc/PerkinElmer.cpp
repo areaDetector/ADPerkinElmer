@@ -957,6 +957,7 @@ void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
     if (pGainBuffer_ != NULL) {
       setIntegerParam(PE_GainAvailable, AVAILABLE);
     }
+    setShutter(ADShutterClosed);
     break;
     
   case PE_ACQUIRE_ACQUISITION:
@@ -966,6 +967,7 @@ void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
     if (imageMode == PEImageAverage) {
       endFrameCallback(hAcqDesc);
     }
+    setShutter(ADShutterClosed);
     break;
   
   }
@@ -1204,6 +1206,7 @@ void PerkinElmer::acquireStart(void)
 
   Acquisition_ResetFrameCnt(hAcqDesc_);
   Acquisition_SetReady(hAcqDesc_, 1);
+  setShutter(ADShutterOpen);
   switch (iMode) {
     case PEImageSingle:
       uiPEResult = Acquisition_Acquire_Image(hAcqDesc_, iFrames, numFramesToSkip,
@@ -1260,6 +1263,7 @@ void PerkinElmer::acquireStopTask(void)
   while (1) {
     epicsEventWait(acquireStopEvent_);
     Acquisition_Abort(hAcqDesc_);
+    setShutter(ADShutterClosed);
   }
 }
     
@@ -1296,6 +1300,9 @@ void PerkinElmer::acquireOffsetImage (void)
   iAcqMode_ = PE_ACQUIRE_OFFSET;
   setIntegerParam(PE_CurrentOffsetFrame, 0);
   setIntegerParam(PE_OffsetAvailable, NOT_AVAILABLE);
+  
+  // Make sure the shutter is closed
+  setShutter(ADShutterClosed);
 
   if ((uiPEResult = Acquisition_Acquire_OffsetImage(hAcqDesc_, pOffsetBuffer_, 
                                                     uiRows_, uiColumns_, iFrames)) != HIS_ALL_OK)
@@ -1339,6 +1346,7 @@ void PerkinElmer::acquireGainImage(void)
   iAcqMode_ = PE_ACQUIRE_GAIN;
   setIntegerParam(PE_CurrentGainFrame, 0);
   setIntegerParam(PE_GainAvailable, NOT_AVAILABLE);
+  setShutter(ADShutterOpen);
 
   if ((uiPEResult = Acquisition_Acquire_GainImage(hAcqDesc_, pOffsetBuffer_, pGainBuffer_, 
                                                   uiRows_, uiColumns_, iFrames)) != HIS_ALL_OK)
