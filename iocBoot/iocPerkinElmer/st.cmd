@@ -45,6 +45,9 @@ dbLoadRecords("$(AREA_DETECTOR)/ADApp/Db/NDStdArrays.template", "P=$(PREFIX),R=i
 # Load all other plugins using commonPlugins.cmd
 < ../commonPlugins.cmd
 
+# Load sseq record for acquisition sequence
+dbLoadRecords("$(CALC)/calcApp/Db/yySseq.db", "P=$(PREFIX), S=AcquireSequence")
+
 iocInit()
 
 # save things every thirty seconds
