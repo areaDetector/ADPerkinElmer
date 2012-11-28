@@ -754,7 +754,7 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
   int           useOffset;
   int           useGain;
   int           usePixelCorrection;
-  int           dims[2];
+  size_t        dims[2];
   int           acquiring;
   DWORD         HISError;
   DWORD         FGError;
@@ -866,9 +866,9 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
   // Copy the data from the input to the output
   memcpy(pImage->pData, pInput, arrayInfo.totalBytes);
 
-  setIntegerParam(NDArraySize,  arrayInfo.totalBytes);
-  setIntegerParam(NDArraySizeX, pImage->dims[0].size);
-  setIntegerParam(NDArraySizeY, pImage->dims[1].size);
+  setIntegerParam(NDArraySize,  (int)arrayInfo.totalBytes);
+  setIntegerParam(NDArraySizeX, (int)pImage->dims[0].size);
+  setIntegerParam(NDArraySizeY, (int)pImage->dims[1].size);
 
 
   /* Put the frame number and time stamp into the buffer */

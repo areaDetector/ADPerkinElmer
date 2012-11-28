@@ -271,7 +271,7 @@ private:
 #define PE_SkipFramesString                 "PE_SKIP_FRAMES"
 #define PE_NumFramesToSkipString            "PE_NUM_FRAMES_TO_SKIP"
 
-#define NUM_PERKIN_ELMER_PARAMS (&PE_LAST_PARAM - &PE_FIRST_PARAM + 1)
+#define NUM_PERKIN_ELMER_PARAMS ((int)(&PE_LAST_PARAM - &PE_FIRST_PARAM + 1))
 //______________________________________________________________________________________________
 
 #endif
