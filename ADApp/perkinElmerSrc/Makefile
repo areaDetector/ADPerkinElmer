@@ -11,11 +11,13 @@ endif
 LIBRARY_IOC_WIN32 = PerkinElmer
 LIB_SRCS_WIN32 += PerkinElmer.cpp
 
-PROD_IOC_WIN32 += PerkinElmerApp
+PROD_NAME = PerkinElmerApp
+PROD_IOC_WIN32 += $(PROD_NAME)
 PROD_HOST_WIN32 += testBinning
 
 # <name>.dbd will be created from <name>Include.dbd
-DBD += PerkinElmerApp.dbd
+DBD += $(PROD_NAME).dbd
+$(PROD_NAME)_DBD += PerkinElmerSupport.dbd
 DBD += PerkinElmerSupport.dbd
 
 # <name>_registerRecordDeviceDriver.cpp will be created from <name>.dbd
