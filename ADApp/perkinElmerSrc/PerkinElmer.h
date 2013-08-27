@@ -36,12 +36,13 @@
 #include <epicsMutex.h>
 #include <cantProceed.h>
 #include <iocsh.h>
-#include <epicsExport.h>
 
 #include "ADDriver.h"
 
 #include <windows.h>
 #include "Acq.h"
+
+#include <epicsExport.h>
 
 //______________________________________________________________________________________________
 
