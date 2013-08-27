@@ -11,6 +11,7 @@ endif
 
 LIBRARY_IOC_WIN32 = PerkinElmer
 LIB_SRCS_WIN32 += PerkinElmer.cpp
+LIB_LIBS += XISL
 
 DBD += PerkinElmerSupport.dbd
 
