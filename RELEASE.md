@@ -32,3 +32,10 @@ R1-9-1 and earlier
 ------------------
 Release notes are part of the
 [areaDetector Release Notes](http://cars.uchicago.edu/software/epics/areaDetectorReleaseNotes.html).
+
+Future Releases
+===============
+* Test gain file input
+* Test bad pixel map, modify ours
+* Test supplied Nexus template file
+
