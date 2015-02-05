@@ -1686,8 +1686,8 @@ static const iocshArg * const PerkinElmerConfigArgs[] =  {&PerkinElmerConfigArg0
                                                           &PerkinElmerConfigArg1,
                                                           &PerkinElmerConfigArg2,
                                                           &PerkinElmerConfigArg3,
-                                                          &PerkinElmerConfigArg2,
-                                                          &PerkinElmerConfigArg3,
+                                                          &PerkinElmerConfigArg4,
+                                                          &PerkinElmerConfigArg5,
                                                           &PerkinElmerConfigArg6};
 static const iocshFuncDef configPerkinElmer = {"PerkinElmerConfig", 7, PerkinElmerConfigArgs};
 static void configPerkinElmerCallFunc(const iocshArgBuf *args)
