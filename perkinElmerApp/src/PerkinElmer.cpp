@@ -643,7 +643,7 @@ void PerkinElmer::reportSensors(FILE *fp, int details)
   unsigned int uiPEResult;
   unsigned int uiChannelType, uiRows, uiColumns, uiDataType, uiSortFlags;
   int iChannelNum, iFrames;
-  long numGbIFSensors;
+  long numGbIFSensors=0;
   int i;
   GBIF_DEVICE_PARAM *pGbIFDeviceParam;
   BOOL bEnableIRQ;
@@ -654,19 +654,25 @@ void PerkinElmer::reportSensors(FILE *fp, int details)
   // Iterate through all this sensors and display sensor data
   do
   {
-    if ((uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc)) != HIS_ALL_OK)
+    if ((uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc)) != HIS_ALL_OK) {
       fprintf(fp, "  Error: %d  GetNextSensor failed!\n", uiPEResult);
+      return;
+    }
 
     fprintf(fp, "  Sensor %d\n", Pos);
 
     // Ask for communication device type and its number
-    if ((uiPEResult = Acquisition_GetCommChannel(hAcqDesc, &uiChannelType, &iChannelNum)) != HIS_ALL_OK)
+    if ((uiPEResult = Acquisition_GetCommChannel(hAcqDesc, &uiChannelType, &iChannelNum)) != HIS_ALL_OK) {
       fprintf(fp, "    Error: %d  GetCommChannel failed!\n", uiPEResult);
+      return;
+    }
 
     // Ask for data organization
     if ((uiPEResult=Acquisition_GetConfiguration(hAcqDesc, (unsigned int *) &iFrames, &uiRows, &uiColumns, &uiDataType,
-        &uiSortFlags, &bEnableIRQ, &dwAcqType, &dwSystemID, &dwSyncMode, &dwHwAccess)) != HIS_ALL_OK)
+        &uiSortFlags, &bEnableIRQ, &dwAcqType, &dwSystemID, &dwSyncMode, &dwHwAccess)) != HIS_ALL_OK) {
       fprintf(fp, "    Error: %d GetConfiguration failed!\n", uiPEResult);
+      return;
+    }
 
     fprintf(fp, "    Channel type:     %d\n", uiChannelType);
     fprintf(fp, "    Channel number:   %d\n", iChannelNum);
@@ -683,13 +689,17 @@ void PerkinElmer::reportSensors(FILE *fp, int details)
 
   } while (Pos!=0);
   
-  if ((uiPEResult = Acquisition_GbIF_GetDeviceCnt(&numGbIFSensors)) != HIS_ALL_OK)
+  if ((uiPEResult = Acquisition_GbIF_GetDeviceCnt(&numGbIFSensors)) != HIS_ALL_OK) {
     fprintf(fp, "  Error: %d  GbIF_GetDeviceCnt failed!\n", uiPEResult);
+    return;
+  }
   if (numGbIFSensors <= 0) return;
   
   pGbIFDeviceParam = (GBIF_DEVICE_PARAM *)calloc(numGbIFSensors, sizeof(GBIF_DEVICE_PARAM));
-  if ((uiPEResult = Acquisition_GbIF_GetDeviceList(pGbIFDeviceParam, numGbIFSensors)) != HIS_ALL_OK)
+  if ((uiPEResult = Acquisition_GbIF_GetDeviceList(pGbIFDeviceParam, numGbIFSensors)) != HIS_ALL_OK) {
     fprintf(fp, "  Error: %d  GbIF_GetDeviceList failed!\n", uiPEResult);
+    return;
+  }
   
   fprintf(fp, "Total GbIF sensors in system: %d\n", numGbIFSensors);
   for (i=0; i<numGbIFSensors; i++) {
