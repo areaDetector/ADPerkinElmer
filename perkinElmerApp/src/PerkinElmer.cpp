@@ -629,7 +629,10 @@ void PerkinElmer::report(FILE *fp, int details)
       fprintf(fp, "    LeakRows:     %d\n", cHwHeaderInfo_.dwLeakRows);
     }
   }
-  if (details > 1) reportSensors(fp, details);
+  // Can't call reportSensors when acquiring, it crashes IOC
+  int acquiring;
+  getIntegerParam(ADAcquire, &acquiring);
+  if (!acquiring && (details > 1)) reportSensors(fp, details);
   
   /* Invoke the base class method */
   ADDriver::report(fp, details);
