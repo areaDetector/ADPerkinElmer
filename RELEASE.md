@@ -23,11 +23,14 @@ files respectively, in the configure/ directory of the appropriate release of th
 Release Notes
 =============
 
-R2-1 (February XXX, 2015)
+R2-1 (March 30, 2015)
 ----
 * Fixed a bug introduced in R1-8.  The "maxMemory" and "priority" arguments in the PerkinElmerConfig
   iocsh command were not being set correctly. Uninitialized memory locations were being passed to 
   the constructor, which could lead to unpredictable behavior.
+* Bug fix: running asynReport with details > 1 would crash IOC if acquisition was in progress.
+* Changes in st.cmd to be compatible with ADCore R2-2
+
 
 R2-0 (March 20, 2014)
 ----
