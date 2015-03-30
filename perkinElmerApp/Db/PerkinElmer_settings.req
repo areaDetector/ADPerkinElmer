@@ -10,3 +10,4 @@ $(P)$(R)PEGain
 $(P)$(R)PESkipFrames
 $(P)$(R)PENumFramesToSkip
 $(P)$(R)PENumFrameBuffers
+file "ADBase_settings.req", P=$(P), R=$(R)
