@@ -23,7 +23,7 @@ files respectively, in the configure/ directory of the appropriate release of th
 Release Notes
 =============
 
-R2-1 (March 30, 2015)
+R2-1 (16-April-2015)
 ----
 * Fixed a bug introduced in R1-8.  The "maxMemory" and "priority" arguments in the PerkinElmerConfig
   iocsh command were not being set correctly. Uninitialized memory locations were being passed to 
@@ -32,7 +32,7 @@ R2-1 (March 30, 2015)
 * Changes in st.cmd to be compatible with ADCore R2-2
 
 
-R2-0 (March 20, 2014)
+R2-0 (20-March-2014)
 ----
 * Moved the repository to [Github](https://github.com/areaDetector/ADmarCCD).
 * Re-organized the directory structure to separate the driver library from the example IOC application.
