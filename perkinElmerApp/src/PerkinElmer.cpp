@@ -530,6 +530,7 @@ void PerkinElmer::setBinning(void)
   }
 }
 
+
 //_____________________________________________________________________________________________
 
 /** Report status of the driver.
@@ -1057,9 +1058,16 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
         "%s:%s: Error: %d  Acquisition_SetFrameSync failed!\n", 
         driverName, functionName, uiPEResult);
   }
-
+  else if (function == PE_Gain) {
+    if ( adstatus == ADStatusIdle ) {
+      //  set detector gain
+      if ((uiPEResult = Acquisition_SetCameraGain(hAcqDesc_, value))!=HIS_ALL_OK)
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+          "%s:%s: Error: %d SetCameraGain failed!\n", 
+          driverName, functionName, uiPEResult);
+    }
+  }
   else if (function == ADTriggerMode) {
-    getIntegerParam(ADStatus, &adstatus);
     retstat |= getIntegerParam(ADTriggerMode, &iTrigModeReq_);
     asynPrint(pasynUser, ASYN_TRACE_FLOW,
       "%s:%s: Setting Requested Trigger Mode: %d\n", 
@@ -1137,8 +1145,6 @@ asynStatus PerkinElmer::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
       setExposureTime();
     }
 
-  }
-  else if (function == ADGain) {
   }
   else {
     /* If this parameter belongs to a base class call its method */
