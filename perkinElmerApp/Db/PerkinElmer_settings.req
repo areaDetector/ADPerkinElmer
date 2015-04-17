@@ -1,6 +1,8 @@
+file "ADBase_settings.req", P=$(P), R=$(R)
 $(P)$(R)PECorrectionsDir
 $(P)$(R)PENumOffsetFrames
 $(P)$(R)PEUseOffset
+$(P)$(R)PEOffsetConstant
 $(P)$(R)PENumGainFrames
 $(P)$(R)PEUseGain
 $(P)$(R)PEGainFile
@@ -10,4 +12,3 @@ $(P)$(R)PEGain
 $(P)$(R)PESkipFrames
 $(P)$(R)PENumFramesToSkip
 $(P)$(R)PENumFrameBuffers
-file "ADBase_settings.req", P=$(P), R=$(R)

@@ -135,6 +135,20 @@ record(bo, "$(P)$(R)PEUseOffset")
    field(ONAM, "Enable")
 }
 
+record(longout, "$(P)$(R)PEOffsetConstant")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_OFFSET_CONSTANT")
+}
+
+record(longin, "$(P)$(R)PEOffsetConstant_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_OFFSET_CONSTANT")
+   field(SCAN, "I/O Intr")
+}
+
 ######################
 # Gain records
 ######################
