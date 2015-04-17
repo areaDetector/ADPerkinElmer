@@ -94,6 +94,7 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
   createParam(PE_CurrentOffsetFrameString,          asynParamInt32,   &PE_CurrentOffsetFrame);
   createParam(PE_UseOffsetString,                   asynParamInt32,   &PE_UseOffset);
   createParam(PE_OffsetAvailableString,             asynParamInt32,   &PE_OffsetAvailable);
+  createParam(PE_OffsetConstantString,              asynParamInt32,   &PE_OffsetConstant);
   createParam(PE_AcquireGainString,                 asynParamInt32,   &PE_AcquireGain);
   createParam(PE_NumGainFramesString,               asynParamInt32,   &PE_NumGainFrames);
   createParam(PE_CurrentGainFrameString,            asynParamInt32,   &PE_CurrentGainFrame);
@@ -523,6 +524,11 @@ void PerkinElmer::setBinning(void)
     asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
       "%s:%s:  set binning %d x %d, PEBinning=%d\n", 
       driverName, functionName, binX, binY, PEBinning);
+    // If the binning changes then the offset needs to be collected again.
+    setIntegerParam(PE_OffsetAvailable, NOT_AVAILABLE);
+    if (pOffsetBuffer_ != NULL)
+      free(pOffsetBuffer_);
+    pOffsetBuffer_ = NULL;
   } else {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
       "%s:%s:  invalid binning %d x %d\n", 
@@ -963,6 +969,17 @@ void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
       /* raise a flag to the user if offset data is available */
       if (pOffsetBuffer_ != NULL) {
         setIntegerParam(PE_OffsetAvailable, AVAILABLE);
+        /* Subtract the offset constant from the offset
+         * Doing this here is much more efficient that doing it when correcting the offset
+         * on every frame */
+        int offset;
+        unsigned int i;
+        getIntegerParam(PE_OffsetConstant, &offset);
+        if (offset != 0) {
+          for (i=0; i<uiRows_*uiColumns_; i++) {
+            pOffsetBuffer_[i] -= offset;
+          }
+        }
       }
       break;
 
