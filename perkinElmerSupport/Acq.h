@@ -25,6 +25,9 @@ extern "C" {
 #endif  /* __cplusplus */
 
 //#define __X64 // Define this for the 64bit Driver Version
+#ifdef _WIN64
+#define __X64 
+#endif
 #ifdef __X64
 typedef void* ACQDESCPOS;
 #else
@@ -195,7 +198,7 @@ typedef struct
 	char	strPrefilter[9];	// used filter
 	float	fKVolt;				// 
 	float	fAmpere;			//
-	WORD	n_avframes;		// average count
+	WORD	n_avframes;			// average count
 		
 } WinImageHeaderType;
 
@@ -211,6 +214,62 @@ typedef struct
 	unsigned char	wValue6;
 } FPGAType;					// 8 Byte werden bertragen
 
+
+#define EPC_REGISTER_LENGTH      1024
+
+typedef struct RTC_STRUCT {    
+  DWORD year;    
+  DWORD month;								// e.g.: 5 for may
+  DWORD day;    
+  DWORD hour;    
+  DWORD minute;    
+  DWORD second;    
+   
+}RTC_STRUCT; 
+
+typedef struct DETECTOR_BATTERY{    
+  DWORD status; 							// D0: present
+											// D1: charging
+  DWORD serial_no;    
+  DWORD cycle_count;    
+  DWORD temperature;   						// e.g.: 2510 for 25.1 C 
+  DWORD voltage;    						// in mV
+  DWORD current;							// in mA (positive or negative)
+  DWORD capacity;    						// in %
+  DWORD energy;    							// in mWh
+  DWORD charge;    							// in mAh
+      
+}DETECTOR_BATTERY; 
+
+
+typedef struct EPC_REGISTER {
+  DWORD version;
+  DWORD temperature_value[8];				// in 1/1000 C (e.g. 43000 for 43 C)
+  DWORD temperature_warning_level[8];
+  DWORD temperature_error_level[8];
+  RTC_STRUCT rtc_value;
+  DETECTOR_BATTERY battery;
+  DWORD power_state;
+  DWORD sdcard_state;						// D0: is mounted flag
+  DWORD sdcard_usage;						// in %
+  DWORD active_network_config;
+  DWORD lan_status_register;				// D0: LAN enabled
+											// D1: LAN up
+											// D2: LAN used for image transfer
+  DWORD wlan_status_register;				// D0: WLAN enabled
+											// D1: WLAN up
+											// D2: WLAN used for image transfer
+											// D3: is accesspoint (0 for station)
+											// D4: HT20 mode
+											// D5: HT40+ mode
+											// D6: HT40- mode
+  DWORD signal_strength;					// in dBm
+  DWORD channel;
+  DWORD exam_flag;
+  DWORD spartan_id;
+  CHwHeaderInfoEx spartan_register;
+  
+}EPC_REGISTER;
 
 HIS_RETURN Acquisition_Init(HACQDESC *phAcqDesc,
 					  DWORD dwChannelType, int nChannelNr,
@@ -380,6 +439,27 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 																	int iSaveAsDefault
 																	); // val 2010-05-12
 
+// mk 2013-04-19:
+HIS_RETURN Acquisition_wpe_GetVersion(int * major, int * minor, int * release, int * build);
+HIS_RETURN Acquisition_wpe_getAvailableSystems(struct discoveryReply * reply, int * numDevices, int timeout,int port);
+
+HIS_RETURN Acquisition_wpe_GetNetworkConfigs(const char * ipAddress, struct networkConfiguration * configs, int * arrayLength, int * activeConfig);
+HIS_RETURN Acquisition_wpe_ActivateNetworkConfig(const char * ipAddress, int configIndex);
+
+HIS_RETURN Acquisition_wpe_GetErrorCode(void);
+HIS_RETURN Acquisition_wpe_GetErrorCodeEx(char *pBuffer, long len);
+
+// mk 2013-04-19 end
+HIS_RETURN Acquisition_GetTriggerOutStatus(HACQDESC hAcqDesc, int* iTriggerStatus); /// 2013-04-22 Val GetTriggerStatus GbIF 
+
+HIS_RETURN Acquisition_SetCameraFOVMode(HACQDESC hAcqDesc, WORD wMode); // 2013-07-03 val R&F Field Of View 
+HIS_RETURN Acquisition_GetCameraFOVMode(HACQDESC hAcqDesc, WORD* wMode); // 2013-07-03 val R&F Field Of View 
+
+HIS_RETURN Acquisition_wpe_ReadCameraRegisters(const char * ipAddress, unsigned long * buffer);
+
+HIS_RETURN Acquisition_GetFTPFile(const char * ipAddress, char * filename, void ** databuffer, long * filesize); //2013-07-17 mk
+HIS_RETURN Acquisition_FreeFTPFileBuffer(void * databuffer); //2013-09-19 mv
+HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, char * filename, void * databuffer, long filesize); //2013-07-17 mk
 
 #ifdef __cplusplus
 }
@@ -446,6 +526,7 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 #define HIS_ERROR_HEADER_TIMEOUT					56
 #define HIS_ERROR_NO_PING_ACK						57
 #define HIS_ERROR_NR_OF_BOARDS_CHANGED				58
+#define HIS_ERROR_SETEXAMFLAG						59 
 
  
 //sort definitions
@@ -465,6 +546,7 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 #define HIS_SORT_HEX_CS						12		//	1620/1640 continous scan
 #define HIS_SORT_12x1						13		//	12X1 Combo
 #define HIS_SORT_14							14		//	
+#define HIS_SORT_TOP_BOTTOM					15		//	2013-07-01 val 1717 RNF  full lines top row bottom row
 
 
 //sequence acquisition options
@@ -483,6 +565,7 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 #define HIS_SYNCMODE_INTERNAL_TIMER		2
 #define HIS_SYNCMODE_EXTERNAL_TRIGGER	3
 #define HIS_SYNCMODE_FREE_RUNNING		4
+#define HIS_SYNCMODE_AUTO_TRIGGER		8 // val 2013-05-13
 
 #define HIS_CAMMODE_SETSYNC		0x8
 #define HIS_CAMMODE_TIMEMASK	0x7
@@ -497,6 +580,8 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 #define HIS_BOARD_TYPE_ELTEC_XRD_FGX			0x8
 #define HIS_BOARD_TYPE_ELTEC_XRD_FGE_Opto		0x10
 #define HIS_BOARD_TYPE_ELTEC_GbIF				0x20
+#define HIS_BOARD_TYPE_ELTEC_WPE				0x40	// mk 2013-04-16 additional functions for wpe lib
+#define HIS_BOARD_TYPE_ELTEC_EMBEDDED			0x60	// mk 2013-04-16 embedded is gbif and wpe
 
 #define HIS_MAX_TIMINGS							0x8
 
@@ -511,6 +596,11 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 #define XIS_DETECTOR_SUPPORTS_MULTIPLE_TRIGGER_MODES	0x7
 #define XIS_DETECTOR_SUPPORTS_CONFIGURABLE_TRIGGER_OUT	0x8
 #define XIS_DETECTOR_GRPSIZE_ROI_Y				0x9
+#define XIS_DETECTOR_LIVEBUFFERSIZE				0xA
+#define XIS_DETECTOR_CMD_EXECUTION_DELAY		0xB
+#define XIS_DETECTOR_AUTO_TRIGGER_SELECTABLE	0xC
+#define XIS_DETECTOR_SUPPORTED_FOV_MODES		0xD
+#define XIS_DETECTOR_SUPPORTS_EXAM_FLAG			0xE
 
 
 //Grps 1&2&3&4, 3&4, 2&3, 1&2 ,4, 3, 2, 1
@@ -529,6 +619,10 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 #define XIS_DETECTOR_PROVIDES_ROI_4_GRPS		0x8
 #define XIS_DETECTOR_PROVIDES_ROI_ALL_GRPS		0x1000
 
+#define XIS_DETECTOR_PROVIDES_FOV_1				0x10	// 2013-07-03 val R&F Field Of View
+#define XIS_DETECTOR_PROVIDES_FOV_2				0x20	// 2013-07-03 val R&F Field Of View 2
+#define XIS_DETECTOR_PROVIDES_FOV_3				0x40	// 2013-07-03 val R&F Field Of View 3
+
 
 /*
 #define XIS_DETECTOR_PROVIDES_ROI_GRP_1_2		0x10
@@ -542,11 +636,156 @@ HIS_RETURN Acquisition_SetTriggerOutSignalOptions(HACQDESC hAcqDesc,unsigned sho
 #define XIS_DETECTOR_PROVIDES_BINNING_4x4		0x4
 #define XIS_DETECTOR_PROVIDES_BINNING_1x2		0x8
 #define XIS_DETECTOR_PROVIDES_BINNING_1x4		0x10
+#define XIS_DETECTOR_PROVIDES_BINNING_3x3		0x20
 
 #define XIS_DETECTOR_PROVIDES_BINNING_AVG		0x100
 #define XIS_DETECTOR_PROVIDES_BINNING_SUM		0x200
 // AVG bit 8
 // SUM bit 9
 
+
+
+// wpe library includes
+/* Error codes */
+
+
+
+#define WPE_ERR_OK                   0  //!< No error
+#define WPE_ILLEGAL_BUFFER      -10000  //!< A buffer supplied is 0, or a buffer length to small
+#define WPE_ERR_JSON_PARSE      -10001  //!< Json parse error
+#define WPE_ERR_JSON_UNPACK     -10002  //!< Json unpack error
+#define WPE_ERR_SERVER_ERROR    -10003  //!< Web server error
+#define WPE_ERR_CURL_ERROR      -10004  //!< Error returned by the curl library
+#define WPE_ERR_NO_NET_ADAPTER  -10005  //!< No network adapters found
+#define WPE_ERR_ILLEGAL_PARAM   -10006  //!< Illegal parameter
+#define WPE_ERR_BASE64_ENCODE   -10007  //!< Error during base64 encoding
+
+
+
+/** Possible control actions for ::wpe_SystemControl */
+enum wpe_SystemControlEnum {
+	WPE_SYSTEM_CONTROL_REBOOT = 0,      //!< reboot the system 
+	WPE_SYSTEM_CONTROL_RESTART_NETWORK, //!< restart the network
+	WPE_SYSTEM_CONTROL_PS_SOFT_OFF,     //!< powerstate soft-off only pld on
+	WPE_SYSTEM_CONTROL_PS_SLEEP,		//!< sleep (only Zynq and PLD running)
+	WPE_SYSTEM_CONTROL_PS_ON,			//!< SPARTAN, Zynq, PLD on
+	WPE_SYSTEM_CONTROL_PS_READY4EXP,	//!< Ready for exposure
+	WPE_SYSTEM_CONTROL_PS_STORAGE		//!< Everything off
+};
+
+
+
+/**
+ * The device info
+ *
+ */
+struct deviceInfo
+{
+    char device_version[16];             //!< The device version
+    char spec_version[16];               //!< GigE vision spec version
+    char manufacturer_name[32];          //!< The manufactures name
+    char model_name[32];                 //!< The model name
+    char serial_number[16];              //!< The serial number
+    char manufacturer_specific[48];      //!< Some manufacture info
+    char user_name[16];                  //!< Device specific
+};
+
+
+/**
+ * The network information
+ *
+ */
+struct networkInfo
+{
+    char ip[16];        //!< The IP (v4) address as string
+    char mask[16];      //!< The IP mask as string
+    char broadcast[16]; //!< The IP broadcast as string
+    char mac[18];       //!< The MAC address as string    
+};
+
+
+/**
+ * The discovery reply
+ * 
+ */
+struct discoveryReply
+{
+    struct deviceInfo deviceInfo; //!< The device information
+    struct networkInfo lanInfo;   //!< The LAN network setup
+    struct networkInfo wlanInfo;  //!< The WLAN network setup
+    
+    char gvcp_ip[16];             //!< Which IP address is used for image transfer
+};
+
+
+
+#define DISCOVERY_PORT 12345    //!< The default discovery port
+#define DISCOVERY_TIMEOUT 2000  //!< The default discovery timeout
+
+
+
+/**
+ * Structure for holding the adapter
+ * part of a configuration
+ *
+ * 
+ */
+struct networkAdapterConfiguration
+{
+    int enabled;        //!< Enabled flag
+    int hw_accel;       //!< Used image transfer
+    int bridged;        //!< Is the device in a bridge
+
+    char ifname[16];    //!< Interface name (eth0)
+    char ipaddr[16];    //!< IP address
+    char netmask[16];   //!< Netmask
+    char proto[16];     //!< "static" or "dhcp"
+    char dns[16];       //!< DNS server
+    char gateway[16];   //!< Gateway
+    char macaddr[18];   //!< MAC address
+    
+    char not_used[110]; //!< To fill up the struct to 320 byte
+};
+
+
+/**
+ * Wifi configurations
+ */
+struct wifiConfiguration
+{
+    char mode[32];      //!< Accesspoint or client
+    char agmode[32];    //!< agmode
+    int channel;        //!< Channel
+
+    char ssid[64];          //!< Own SSID if mode == "ap" or the accesspoints ssid
+    char description[64];   //!< Contains the description in case of a station
+};
+
+
+/**
+ * Structure for holding the complete 
+ * network configuration.
+ * 
+ */
+struct networkConfiguration
+{
+    char path[128];         //!< The configurations path
+    char name[80];          //!< The configuration name
+    char hostname[80];      //!< The hostname
+    int readonly;           //!< Is the configuration readonly
+    int sshd_enabled;       //!< SSH daemon enabled
+
+    int gbif_enabled;       //!< Is the GBif enabled
+            
+    struct networkAdapterConfiguration lan;     //!< LAN
+    struct networkAdapterConfiguration wlan;    //!< WLAN
+
+    struct wifiConfiguration wifi; //!< Wifi configuration
+    
+    char notUsed[256];     //!< For later extensions
+};
+
+
+// wpe library includes end
 
 #endif	//_ACQUISITION_H
