@@ -120,7 +120,7 @@ typedef enum
 {
   NOT_AVAILABLE,
   AVAILABLE
-} Avalability_t;
+} Availability_t;
 
 typedef enum
 {
@@ -162,6 +162,7 @@ protected:
   int PE_CurrentOffsetFrame;
   int PE_UseOffset;
   int PE_OffsetAvailable;
+  int PE_OffsetConstant;
   int PE_AcquireGain;
   int PE_NumGainFrames;
   int PE_CurrentGainFrame;
@@ -250,6 +251,7 @@ private:
 #define PE_CurrentOffsetFrameString         "PE_CURRENT_OFFSET_FRAME"
 #define PE_UseOffsetString                  "PE_USE_OFFSET"
 #define PE_OffsetAvailableString            "PE_OFFSET_AVAILABLE"
+#define PE_OffsetConstantString             "PE_OFFSET_CONSTANT"
 #define PE_AcquireGainString                "PE_ACQUIRE_GAIN"
 #define PE_NumGainFramesString              "PE_NUM_GAIN_FRAMES"
 #define PE_CurrentGainFrameString           "PE_CURRENT_GAIN_FRAME"
