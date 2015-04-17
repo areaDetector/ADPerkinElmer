@@ -362,6 +362,39 @@
           mbbi</td>
       </tr>
       <tr>
+        <td>
+          PE_OffsetConstant</td>
+        <td>
+          asynInt32</td>
+        <td>
+          r/w</td>
+        <td>
+          An offset that is added to the image when the offset correction is performed. CorrectedImage
+          = RawImage - OffsetImage + OffsetConstant. This constant should be used to prevent
+          the CorrectedImage from having any negative pixel values, which would otherwise
+          be clipped to 0. For efficiency this value is actually subtracted from the offset
+          image as soon as it is collected, so it is then effectively added to each image
+          when offset correction is done. This results in 2 restrictions:
+          <ol>
+            <li>PEOffsetConstant must be specified before the offset images are collected. If
+              it is changed then the offset images must be collected again.</li>
+            <li>The value must be less than the minimum value of the offset image, or else negative
+              values will result. In practice this should not be a problem, since an offset of
+              100 should be sufficient to prevent negative values during offset correction, and
+              the offset images are always greater than 100.</li>
+          </ol>
+        </td>
+        <td>
+          PE_OFFSET_CONSTANT</td>
+        <td>
+          $(P)$(R)PEOffsetContant<br />
+          $(P)$(R)PEOffsetContant_RBV</td>
+        <td>
+          longout
+          <br />
+          longin</td>
+      </tr>
+      <tr>
         <td align="center" colspan="7">
           <b>Gain corrections</b></td>
       </tr>
