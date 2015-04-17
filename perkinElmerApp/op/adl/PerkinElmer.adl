@@ -1,6 +1,6 @@
 
 file {
-	name="/home/epics/devel-AD2.0/areaDetector-2-0/ADPerkinElmer/perkinElmerApp/op/adl/PerkinElmer.adl"
+	name="/home/epics/devel/areaDetector-2-2/ADPerkinElmer/perkinElmerApp/op/adl/PerkinElmer.adl"
 	version=030107
 }
 display {
@@ -1279,7 +1279,7 @@ rectangle {
 		x=360
 		y=35
 		width=350
-		height=475
+		height=500
 	}
 	"basic attribute" {
 		clr=14
@@ -1340,9 +1340,333 @@ composite {
 composite {
 	object {
 		x=373
+		y=260
+		width=325
+		height=160
+	}
+	"composite name"=""
+	children {
+		text {
+			object {
+				x=515
+				y=265
+				width=40
+				height=20
+			}
+			"basic attribute" {
+				clr=14
+			}
+			textix="Gain"
+		}
+		rectangle {
+			object {
+				x=373
+				y=260
+				width=325
+				height=160
+			}
+			"basic attribute" {
+				clr=14
+				fill="outline"
+			}
+		}
+		text {
+			object {
+				x=378
+				y=340
+				width=100
+				height=20
+			}
+			"basic attribute" {
+				clr=14
+			}
+			textix="Correction"
+		}
+		"text update" {
+			object {
+				x=483
+				y=341
+				width=110
+				height=18
+			}
+			monitor {
+				chan="$(P)$(R)PEGainAvailable"
+				clr=54
+				bclr=2
+			}
+			clrmod="alarm"
+			limits {
+			}
+		}
+		menu {
+			object {
+				x=598
+				y=341
+				width=90
+				height=19
+			}
+			control {
+				chan="$(P)$(R)PEUseGain"
+				clr=14
+				bclr=51
+			}
+		}
+		composite {
+			object {
+				x=378
+				y=315
+				width=305
+				height=20
+			}
+			"composite name"=""
+			children {
+				"message button" {
+					object {
+						x=378
+						y=315
+						width=200
+						height=20
+					}
+					control {
+						chan="$(P)$(R)PEAcquireGain"
+						clr=14
+						bclr=51
+					}
+					label="Acquire Gain Correction"
+					press_msg="1"
+				}
+				"text update" {
+					object {
+						x=583
+						y=316
+						width=100
+						height=18
+					}
+					monitor {
+						chan="$(P)$(R)PEAcquireGain"
+						clr=54
+						bclr=2
+					}
+					clrmod="alarm"
+					limits {
+					}
+				}
+			}
+		}
+		composite {
+			object {
+				x=418
+				y=290
+				width=270
+				height=20
+			}
+			"composite name"=""
+			children {
+				text {
+					object {
+						x=418
+						y=290
+						width=130
+						height=20
+					}
+					"basic attribute" {
+						clr=14
+					}
+					textix="# Gain Frames"
+				}
+				"text entry" {
+					object {
+						x=563
+						y=290
+						width=60
+						height=20
+					}
+					control {
+						chan="$(P)$(R)PENumGainFrames"
+						clr=14
+						bclr=51
+					}
+					limits {
+					}
+				}
+				"text update" {
+					object {
+						x=628
+						y=291
+						width=60
+						height=18
+					}
+					monitor {
+						chan="$(P)$(R)PECurrentGainFrame"
+						clr=54
+						bclr=4
+					}
+					limits {
+					}
+				}
+			}
+		}
+		"text entry" {
+			object {
+				x=378
+				y=365
+				width=315
+				height=20
+			}
+			control {
+				chan="$(P)$(R)PEGainFile"
+				clr=14
+				bclr=51
+			}
+			format="string"
+			limits {
+			}
+		}
+		"message button" {
+			object {
+				x=405
+				y=395
+				width=120
+				height=20
+			}
+			control {
+				chan="$(P)$(R)PELoadGainFile"
+				clr=14
+				bclr=51
+			}
+			label="Load Gain File"
+			press_msg="1"
+		}
+		"message button" {
+			object {
+				x=545
+				y=395
+				width=120
+				height=20
+			}
+			control {
+				chan="$(P)$(R)PESaveGainFile"
+				clr=14
+				bclr=51
+			}
+			label="Save Gain File"
+			press_msg="1"
+		}
+	}
+}
+composite {
+	object {
+		x=373
+		y=425
+		width=325
+		height=105
+	}
+	"composite name"=""
+	children {
+		text {
+			object {
+				x=465
+				y=430
+				width=140
+				height=20
+			}
+			"basic attribute" {
+				clr=14
+			}
+			textix="Bad Pixel File"
+		}
+		rectangle {
+			object {
+				x=373
+				y=425
+				width=325
+				height=105
+			}
+			"basic attribute" {
+				clr=14
+				fill="outline"
+			}
+		}
+		"text entry" {
+			object {
+				x=378
+				y=455
+				width=315
+				height=20
+			}
+			control {
+				chan="$(P)$(R)PEPixelCorrectionFile"
+				clr=14
+				bclr=51
+			}
+			format="string"
+			limits {
+			}
+		}
+		text {
+			object {
+				x=378
+				y=480
+				width=100
+				height=20
+			}
+			"basic attribute" {
+				clr=14
+			}
+			textix="Correction"
+		}
+		menu {
+			object {
+				x=598
+				y=481
+				width=90
+				height=19
+			}
+			control {
+				chan="$(P)$(R)PEUsePixelCorrection"
+				clr=14
+				bclr=51
+			}
+		}
+		"text update" {
+			object {
+				x=483
+				y=481
+				width=110
+				height=18
+			}
+			monitor {
+				chan="$(P)$(R)PEPixelCorrectionAvailable"
+				clr=54
+				bclr=2
+			}
+			clrmod="alarm"
+			limits {
+			}
+		}
+		"message button" {
+			object {
+				x=460
+				y=505
+				width=150
+				height=20
+			}
+			control {
+				chan="$(P)$(R)PELoadPixelCorrection"
+				clr=14
+				bclr=51
+			}
+			label="Load Bad Pixel File"
+			press_msg="1"
+		}
+	}
+}
+composite {
+	object {
+		x=373
 		y=120
 		width=325
-		height=110
+		height=135
 	}
 	"composite name"=""
 	children {
@@ -1363,94 +1687,11 @@ composite {
 				x=373
 				y=120
 				width=325
-				height=110
+				height=135
 			}
 			"basic attribute" {
 				clr=14
 				fill="outline"
-			}
-		}
-		"text update" {
-			object {
-				x=483
-				y=201
-				width=110
-				height=18
-			}
-			monitor {
-				chan="$(P)$(R)PEOffsetAvailable"
-				clr=54
-				bclr=2
-			}
-			clrmod="alarm"
-			limits {
-			}
-		}
-		menu {
-			object {
-				x=598
-				y=201
-				width=90
-				height=19
-			}
-			control {
-				chan="$(P)$(R)PEUseOffset"
-				clr=14
-				bclr=51
-			}
-		}
-		text {
-			object {
-				x=378
-				y=200
-				width=100
-				height=20
-			}
-			"basic attribute" {
-				clr=14
-			}
-			textix="Correction"
-		}
-		composite {
-			object {
-				x=378
-				y=175
-				width=305
-				height=20
-			}
-			"composite name"=""
-			children {
-				"text update" {
-					object {
-						x=583
-						y=176
-						width=100
-						height=18
-					}
-					monitor {
-						chan="$(P)$(R)PEAcquireOffset"
-						clr=54
-						bclr=2
-					}
-					clrmod="alarm"
-					limits {
-					}
-				}
-				"message button" {
-					object {
-						x=378
-						y=175
-						width=200
-						height=20
-					}
-					control {
-						chan="$(P)$(R)PEAcquireOffset"
-						clr=14
-						bclr=51
-					}
-					label="Acquire Offset Correction"
-					press_msg="1"
-				}
 			}
 		}
 		composite {
@@ -1506,62 +1747,15 @@ composite {
 				}
 			}
 		}
-	}
-}
-composite {
-	object {
-		x=373
-		y=235
-		width=325
-		height=160
-	}
-	"composite name"=""
-	children {
-		text {
-			object {
-				x=515
-				y=240
-				width=40
-				height=20
-			}
-			"basic attribute" {
-				clr=14
-			}
-			textix="Gain"
-		}
-		rectangle {
-			object {
-				x=373
-				y=235
-				width=325
-				height=160
-			}
-			"basic attribute" {
-				clr=14
-				fill="outline"
-			}
-		}
-		text {
-			object {
-				x=378
-				y=315
-				width=100
-				height=20
-			}
-			"basic attribute" {
-				clr=14
-			}
-			textix="Correction"
-		}
 		"text update" {
 			object {
 				x=483
-				y=316
+				y=226
 				width=110
 				height=18
 			}
 			monitor {
-				chan="$(P)$(R)PEGainAvailable"
+				chan="$(P)$(R)PEOffsetAvailable"
 				clr=54
 				bclr=2
 			}
@@ -1572,49 +1766,46 @@ composite {
 		menu {
 			object {
 				x=598
-				y=316
+				y=226
 				width=90
 				height=19
 			}
 			control {
-				chan="$(P)$(R)PEUseGain"
+				chan="$(P)$(R)PEUseOffset"
 				clr=14
 				bclr=51
 			}
 		}
+		text {
+			object {
+				x=378
+				y=225
+				width=100
+				height=20
+			}
+			"basic attribute" {
+				clr=14
+			}
+			textix="Correction"
+		}
 		composite {
 			object {
 				x=378
-				y=290
+				y=200
 				width=305
 				height=20
 			}
 			"composite name"=""
 			children {
-				"message button" {
-					object {
-						x=378
-						y=290
-						width=200
-						height=20
-					}
-					control {
-						chan="$(P)$(R)PEAcquireGain"
-						clr=14
-						bclr=51
-					}
-					label="Acquire Gain Correction"
-					press_msg="1"
-				}
 				"text update" {
 					object {
 						x=583
-						y=291
+						y=201
 						width=100
 						height=18
 					}
 					monitor {
-						chan="$(P)$(R)PEAcquireGain"
+						chan="$(P)$(R)PEAcquireOffset"
 						clr=54
 						bclr=2
 					}
@@ -1622,213 +1813,64 @@ composite {
 					limits {
 					}
 				}
-			}
-		}
-		composite {
-			object {
-				x=418
-				y=265
-				width=270
-				height=20
-			}
-			"composite name"=""
-			children {
-				text {
+				"message button" {
 					object {
-						x=418
-						y=265
-						width=130
-						height=20
-					}
-					"basic attribute" {
-						clr=14
-					}
-					textix="# Gain Frames"
-				}
-				"text entry" {
-					object {
-						x=563
-						y=265
-						width=60
+						x=378
+						y=200
+						width=200
 						height=20
 					}
 					control {
-						chan="$(P)$(R)PENumGainFrames"
+						chan="$(P)$(R)PEAcquireOffset"
 						clr=14
 						bclr=51
 					}
-					limits {
-					}
+					label="Acquire Offset Correction"
+					press_msg="1"
 				}
-				"text update" {
-					object {
-						x=628
-						y=266
-						width=60
-						height=18
-					}
-					monitor {
-						chan="$(P)$(R)PECurrentGainFrame"
-						clr=54
-						bclr=4
-					}
-					limits {
-					}
-				}
-			}
-		}
-		"text entry" {
-			object {
-				x=378
-				y=340
-				width=315
-				height=20
-			}
-			control {
-				chan="$(P)$(R)PEGainFile"
-				clr=14
-				bclr=51
-			}
-			format="string"
-			limits {
-			}
-		}
-		"message button" {
-			object {
-				x=405
-				y=370
-				width=120
-				height=20
-			}
-			control {
-				chan="$(P)$(R)PELoadGainFile"
-				clr=14
-				bclr=51
-			}
-			label="Load Gain File"
-			press_msg="1"
-		}
-		"message button" {
-			object {
-				x=545
-				y=370
-				width=120
-				height=20
-			}
-			control {
-				chan="$(P)$(R)PESaveGainFile"
-				clr=14
-				bclr=51
-			}
-			label="Save Gain File"
-			press_msg="1"
-		}
-	}
-}
-composite {
-	object {
-		x=373
-		y=400
-		width=325
-		height=105
-	}
-	"composite name"=""
-	children {
-		text {
-			object {
-				x=465
-				y=405
-				width=140
-				height=20
-			}
-			"basic attribute" {
-				clr=14
-			}
-			textix="Bad Pixel File"
-		}
-		rectangle {
-			object {
-				x=373
-				y=400
-				width=325
-				height=105
-			}
-			"basic attribute" {
-				clr=14
-				fill="outline"
-			}
-		}
-		"text entry" {
-			object {
-				x=378
-				y=430
-				width=315
-				height=20
-			}
-			control {
-				chan="$(P)$(R)PEPixelCorrectionFile"
-				clr=14
-				bclr=51
-			}
-			format="string"
-			limits {
 			}
 		}
 		text {
 			object {
-				x=378
-				y=455
-				width=100
+				x=403
+				y=175
+				width=150
 				height=20
 			}
 			"basic attribute" {
 				clr=14
 			}
-			textix="Correction"
+			textix="Offset constant"
 		}
-		menu {
+		"text entry" {
 			object {
-				x=598
-				y=456
-				width=90
-				height=19
+				x=563
+				y=175
+				width=60
+				height=20
 			}
 			control {
-				chan="$(P)$(R)PEUsePixelCorrection"
+				chan="$(P)$(R)PEOffsetConstant"
 				clr=14
 				bclr=51
+			}
+			limits {
 			}
 		}
 		"text update" {
 			object {
-				x=483
-				y=456
-				width=110
+				x=628
+				y=176
+				width=60
 				height=18
 			}
 			monitor {
-				chan="$(P)$(R)PEPixelCorrectionAvailable"
+				chan="$(P)$(R)PEOffsetConstant_RBV"
 				clr=54
-				bclr=2
+				bclr=4
 			}
-			clrmod="alarm"
 			limits {
 			}
-		}
-		"message button" {
-			object {
-				x=460
-				y=480
-				width=150
-				height=20
-			}
-			control {
-				chan="$(P)$(R)PELoadPixelCorrection"
-				clr=14
-				bclr=51
-			}
-			label="Load Bad Pixel File"
-			press_msg="1"
 		}
 	}
 }
