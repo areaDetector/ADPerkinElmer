@@ -29,6 +29,7 @@ R2-2 (17-April-2015)
   when offset correction is done.  It adds a pedestal to the data, ensuring that offset
   correction does not result in negative values, which are then clipped to 0.  Values
   of 100-200 should be sufficient to prevent negative data during offset correction.
+* Updated to version 3-3-2-3 of the XIS SDK.
 * Bug fix: The driver was not changing the gain when the PEGain record was processed.
 * Bug fix: If the binning was changed while offset correction was enabled, and without
   collecting a new offset image, it could crash the IOC.  Now if the binning is changed
