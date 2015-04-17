@@ -23,6 +23,18 @@ files respectively, in the configure/ directory of the appropriate release of th
 Release Notes
 =============
 
+R2-2 (17-April-2015)
+----
+* Added PEOffsetConstant.  This is a user-specified value that is added to each pixel
+  when offset correction is done.  It adds a pedestal to the data, ensuring that offset
+  correction does not result in negative values, which are then clipped to 0.  Values
+  of 100-200 should be sufficient to prevent negative data during offset correction.
+* Bug fix: The driver was not changing the gain when the PEGain record was processed.
+* Bug fix: If the binning was changed while offset correction was enabled, and without
+  collecting a new offset image, it could crash the IOC.  Now if the binning is changed
+  the offset correction is set to Unavailable until a new offset image is collected.
+
+
 R2-1 (16-April-2015)
 ----
 * Fixed a bug introduced in R1-8.  The "maxMemory" and "priority" arguments in the PerkinElmerConfig
