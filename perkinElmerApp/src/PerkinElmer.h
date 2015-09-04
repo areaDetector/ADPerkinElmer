@@ -16,33 +16,10 @@
 #ifndef PERKINELMER_H
 #define PERKINELMER_H
 
-#include <sys/stat.h>
-
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <math.h>
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
-
-#include <epicsTime.h>
-#include <epicsThread.h>
-#include <epicsEvent.h>
-#include <epicsExit.h>
-#include <epicsMutex.h>
-#include <epicsString.h>
-#include <epicsStdio.h>
-#include <epicsMutex.h>
-#include <cantProceed.h>
-#include <iocsh.h>
-
 #include "ADDriver.h"
 
 #include <windows.h>
 #include "Acq.h"
-
-#include <epicsExport.h>
 
 //______________________________________________________________________________________________
 
@@ -75,6 +52,16 @@ typedef enum
   PE_FREE_RUNNING,
   PE_SOFT_TRIGGER
 } PETimingMode_t;
+
+typedef enum
+{
+  PE_SYNC_DDD_CLEAR,
+  PE_SYNC_DDD_NOCLEAR,
+  PE_SYNC_LINEWISE,
+  PE_SYNC_FRAMEWISE,
+  PE_SYNC_AUTOTRIGGER
+} PESyncMode_t;
+
 
 #define TIME0        0
 #define TIME0_STR    "66.5ms"
@@ -179,7 +166,7 @@ protected:
   int PE_DwellTime;
   int PE_NumFrameBuffers;
   int PE_Trigger;
-  int PE_SyncTime;
+  int PE_SyncMode;
   int PE_FrameBufferIndex;
   int PE_ImageNumber;
   int PE_SkipFrames;
@@ -219,26 +206,25 @@ private:
   DWORD         dwSyncMode_;
   DWORD         dwHwAccess_;
   DWORD         dwBoardType_;
-  double        dAcqTimeReq_;
-  double        dAcqTimeAct_;
-  int           iTrigModeReq_;
-  int           iTrigModeAct_;
+  bool          acquireSettingsChanged_;
+  bool          doSoftwareTriggers_; 
 
   bool initializeDetector (void);
   void setBinning(void);
   void reportSensors(FILE *fp, int details);
 
-  void acquireStart(void);
+  void acquireSetup(void);
   void acquireStop(void);
+  void acquireNormalImage(void);
   void acquireOffsetImage(void);
   void acquireGainImage(void);
+  void doSoftwareTrigger(void);
 
   asynStatus loadGainFile(void);
   asynStatus saveGainFile(void);
   asynStatus loadPixelCorrectionFile();
 
-  asynStatus PerkinElmer::setTriggerMode(void);
-  asynStatus PerkinElmer::setExposureTime(void);
+  void reportXISStatus(int errorCode, const char *functionName, const char *formatString, ...);
 
 };
 
@@ -268,7 +254,7 @@ private:
 #define PE_DwellTimeString                  "PE_DWELL_TIME"
 #define PE_NumFrameBuffersString            "PE_NUM_FRAME_BUFFERS"
 #define PE_TriggerString                    "PE_TRIGGER"
-#define PE_SyncTimeString                   "PE_SYNC_TIME"
+#define PE_SyncModeString                   "PE_SYNC_MODE"
 #define PE_FrameBufferIndexString           "PE_FRAME_BUFFER_INDEX"
 #define PE_ImageNumberString                "PE_IMAGE_NUMBER"
 #define PE_SkipFramesString                 "PE_SKIP_FRAMES"
