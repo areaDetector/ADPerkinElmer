@@ -376,17 +376,39 @@ record(bo, "$(P)$(R)PETrigger")
    field(ONAM, "Trigger")
 }
 
-record(longout, "$(P)$(R)PESyncTime")
+record(mbbo, "$(P)$(R)PESyncMode")
 {
    field(PINI, "YES")
    field(DTYP, "asynInt32")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_SYNC_TIME")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_SYNC_MODE")
+   field(ZRVL, "0")
+   field(ZRST, "DDD Clear")
+   field(ONVL, "1")
+   field(ONST, "DDD No Clear")
+   field(TWVL, "2")
+   field(TWST, "Linewise")
+   field(THVL, "3")
+   field(THST, "Framewise")
+   field(FRVL, "4")
+   field(FRST, "AutoTrigger")
+   field(VAL,  "3")
 }
 
-record(longout, "$(P)$(R)PESyncTime_RBV")
+record(mbbi, "$(P)$(R)PESyncMode_RBV")
 {
    field(DTYP, "asynInt32")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_SYNC_TIME")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_SYNC_MODE")
+   field(ZRVL, "0")
+   field(ZRST, "DDD Clear")
+   field(ONVL, "1")
+   field(ONST, "DDD No Clear")
+   field(TWVL, "2")
+   field(TWST, "Linewise")
+   field(THVL, "3")
+   field(THST, "Framewise")
+   field(FRVL, "4")
+   field(FRST, "AutoTrigger")
+   field(SCAN, "I/O Intr")
 }
 
 record(bo, "$(P)$(R)PESkipFrames")
