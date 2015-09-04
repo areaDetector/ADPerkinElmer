@@ -42,7 +42,8 @@ PerkinElmerConfig("$(PORT)", 0, "", 0, 0, 0, 0)
 #PerkinElmerConfig("$(PORT)", 3, 8#2608, 0, 0, 0, 0)
 
 asynSetTraceIOMask($(PORT), 0, 2)
-#asynSetTraceMask($(PORT),0,0xff)
+# Setting this to 9 to enable ASYN_TRACEIO_DRIVER and see XIS calls
+#asynSetTraceMask($(PORT),0, 9)
 
 dbLoadRecords("$(ADPERKINELMER)/db/PerkinElmer.template","P=$(PREFIX),R=cam1:,PORT=$(PORT),ADDR=0,TIMEOUT=1")
 
@@ -52,7 +53,7 @@ NDStdArraysConfigure("Image1", 3, 0, "$(PORT)", 0)
 dbLoadRecords("$(ADCORE)/db/NDStdArrays.template", "P=$(PREFIX),R=image1:,PORT=Image1,ADDR=0,TIMEOUT=1,NDARRAY_PORT=$(PORT),TYPE=Int16,SIZE=16,FTVL=SHORT,NELEMENTS=17000000")
 
 # Load all other plugins using commonPlugins.cmd
-< $(ADCORE)/iocBoot/commonPlugins.cmd
+< $(ADEXAMPLE)/iocBoot/commonPlugins.cmd
 set_requestfile_path("$(ADPERKINELMER)/perkinElmerApp/Db")
 
 iocInit()
