@@ -31,30 +31,30 @@ R2-4 (XXX-September-2015)
   Framewise was the only mode supported in previous versions of the driver.
   * DDD mode is required to use the XRPad models from Perkin Elmer, since they only have a single
     internal frame time, it cannot be programmed.
-  * DDD mode fixes significant problems in earlier versions of the driver when ImageMode=Single.
+  * DDD mode fixes significant problems in earlier versions of the driver when ImageMode=Single. 
     Previously with Single mode and TriggerMode=Internal the frame exposure actually started before
-    Acquire was set to 1.  
+    Acquire was set to 1. 
     This means it might include some time when motors were still moving or before a shutter was open. 
     This is because the frame stream is constantly running, asynchronously to the acquistion command. 
     It just grabs the next image after acquisition is started, which can happen anytime between 
-    0 and AcquireTime seconds after Acquire is set to 1.  
+    0 and AcquireTime seconds after Acquire is set to 1. 
     Previously this could be worked around by setting skip frames=1, but this is very inefficient. 
     DDD mode allows synchronously collecting a single frame.
   * DDD mode fixes significant problems in earlier versions of the driver when TriggerMode=External.
     If trigger mode is run with PESyncMode=Framewise (the only choice in previous versions) then the
-    actual acquisition time for each frame is the time between trigger pulses.  
+    actual acquisition time for each frame is the time between trigger pulses. 
     If this is not exactly the same as the time that was used when collecting the offset images 
     then the data quality will be poor. 
     Setting PESyncMode="DDD No Clear" allows collecting for the time specified by AcquireTime on each
-    external trigger.  
+    external trigger. 
     If the offset images were also collected for this time then the data quality will be
-    good, even if the time between triggers is varying or is different from AcquireTime.  
+    good, even if the time between triggers is varying or is different from AcquireTime. 
     Note however that DDD mode has an additional overhead, so the maximum frame rate is less than 
-    in Framewise mode.  
+    in Framewise mode.
     The overhead is about 0.2 seconds on the model 1621 in 2048x2048 (2K) mode, 
     and about 0.1 seconds in 1K mode.
     The maximum frame rates are thus reduced from 15Hz to 5Hz in 2K mode and from 
-    30Hz to 10Hz in 1K mode.  
+    30Hz to 10Hz in 1K mode.
     Framewise mode is thus still useful for fast triggered acquisition as long as the offset images 
     are collected for the same time as the time between trigger pulses.
 * The driver code was signficantly rewritten to add the DDD mode support, make it simpler, 
