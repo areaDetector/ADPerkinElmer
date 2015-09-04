@@ -12,3 +12,4 @@ $(P)$(R)PEGain
 $(P)$(R)PESkipFrames
 $(P)$(R)PENumFramesToSkip
 $(P)$(R)PENumFrameBuffers
+$(P)$(R)PESyncMode
