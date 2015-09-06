@@ -41,14 +41,6 @@ record(mbbi, "$(P)$(R)ImageMode_RBV")
 ######################
 # Setup records
 ######################
-
-record(longin, "$(P)$(R)PESystemID")
-{
-   field(DTYP, "asynInt32")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_SYSTEMID")
-   field(SCAN, "I/O Intr")
-}
-
 record(longin, "$(P)$(R)PEFrameBuffIndex")
 {
    field(DTYP, "asynInt32")
@@ -82,7 +74,6 @@ record(waveform, "$(P)$(R)PECorrectionsDir")
     field(FTVL, "CHAR")
     field(NELM, "256")
 }
-
 
 ######################
 # Offset records
@@ -264,7 +255,6 @@ record(bo, "$(P)$(R)PELoadPixelCorrection")
    field(ONAM, "Load")
 }
 
-
 record(mbbo, "$(P)$(R)PEGain")
 {
    field(PINI, "YES")
@@ -302,52 +292,6 @@ record(mbbi, "$(P)$(R)PEGain_RBV")
    field(FVST, "8pF")
    field(FVVL, "5")
    field(SCAN, "I/O Intr")
-}
-
-record(mbbo, "$(P)$(R)PEDwellTime")
-{
-   field(PINI, "YES")
-   field(DTYP, "asynInt32")
-   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_DWELL_TIME")
-   field(ZRST, "66.5ms")
-   field(ZRVL, "0")
-   field(ONST, "79.9ms")
-   field(ONVL, "1")
-   field(TWST, "99.8ms")
-   field(TWVL, "2")
-   field(THST, "133.2ms")
-   field(THVL, "3")
-   field(FRST, "199.9ms")
-   field(FRVL, "4")
-   field(FVST, "400.0ms")
-   field(FVVL, "5")
-   field(SXST, "999.8ms")
-   field(SXVL, "6")
-   field(SVST, "1999.8ms")
-   field(SVVL, "7")
- }
-
-record(mbbi, "$(P)$(R)PEDwellTime_RBV")
-{
-   field(DTYP, "asynInt32")
-   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_DWELL_TIME")
-   field(SCAN, "I/O Intr")
-   field(ZRST, "66.5ms")
-   field(ZRVL, "0")
-   field(ONST, "79.9ms")
-   field(ONVL, "1")
-   field(TWST, "99.8ms")
-   field(TWVL, "2")
-   field(THST, "133.2ms")
-   field(THVL, "3")
-   field(FRST, "199.9ms")
-   field(FRVL, "4")
-   field(FVST, "400.0ms")
-   field(FVVL, "5")
-   field(SXST, "999.8ms")
-   field(SXVL, "6")
-   field(SVST, "1999.8ms")
-   field(SVVL, "7")
 }
 
 record(longout, "$(P)$(R)PENumFrameBuffers")
