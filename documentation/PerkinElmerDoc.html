@@ -10,7 +10,7 @@
     <h1>
       areaDetector PerkinElmer driver</h1>
     <h2>
-      October 1, 2012</h2>
+      September 5, 2015</h2>
     <h2>
       Mark Rivers, John Hammonds, Brian Tieman</h2>
     <h2>
@@ -22,6 +22,7 @@
     <li><a href="#Introduction">Introduction</a></li>
     <li><a href="#StandardNotes">Implementation of standard driver parameters</a></li>
     <li><a href="#Driver_parameters">PerkinElmer specific parameters</a></li>
+    <li><a href="#Synchronization">Synchronization and triggering</a></li>
     <li><a href="#Unsupported">Unsupported standard driver parameters</a></li>
     <li><a href="#Configuration">Configuration</a></li>
     <li><a href="#MEDM_screens">MEDM screens</a></li>
@@ -41,10 +42,11 @@
   <p>
     This driver has been tested with the following detectors</p>
   <ul>
-    <li>XRD0820 w/ XRD-FG PCI frame grabber</li>
-    <li>XRD0822 w/ Gigabit Ethernet interface</li>
-    <li>XRD1621 w/ XRD-FGX PCI frame grabber</li>
-    <li>XRD1621 w/ XRD-FGe Opto PCI-Express frame grabber</li>
+    <li>XRD0820 with XRD-FG PCI frame grabber</li>
+    <li>XRD0822 with Gigabit Ethernet interface</li>
+    <li>XRD1621 with XRD-FGX PCI frame grabber</li>
+    <li>XRD1621 with XRD-FGe Opto PCI-Express frame grabber</li>
+    <li>XRPAD with Gigabit Ethernet interface</li>
   </ul>
   <p>
     This driver inherits from <a href="areaDetectorDoc.html#ADDriver">ADDriver</a>.
@@ -90,8 +92,17 @@
           $(P)$(R)AcquireTime<br />
           $(P)$(R)AcquireTime_RBV</td>
         <td>
-          When using Internal Triggers, this parameter controls the period between trigger
-          pulses which will also be equal to the exposure time.</td>
+          When TriggerMode=Internal or Soft Trigger this value controls the exposure time,
+          both for SynchMode="Framewise" and "DDD No Clear".<br />
+          When TriggerMode=External and SynchMode="DDD No Clear" this value also controls
+          the exposure time.<br />
+          When TriggerMode=External and SynchMode="Framewise" the exposure time is determined
+          by the time between trigger pulses, not by AcquireTime.
+          <br />
+          When TriggerMode=Free Running the AcquireTime is ignored, and the detector runs
+          at the maximum possible frame rate and a fixed exposure time.
+          <br />
+        </td>
       </tr>
       <tr>
         <td>
@@ -107,7 +118,8 @@
             <li>Free Running</li>
             <li>Soft Trigger</li>
           </ul>
-        </td>
+          See the <a href="#Synchronization">Synchronization and triggering</a> section below
+          for more details about synchronization and triggering. </td>
       </tr>
       <tr>
         <td>
@@ -192,39 +204,7 @@
         <td>
           $(P)$(R)PEInitialize</td>
         <td>
-          longout</td>
-      </tr>
-      <tr>
-        <td>
-          PE_StatusRBV</td>
-        <td>
-          asynInt32</td>
-        <td>
-          r/w</td>
-        <td>
-          Status of PerkinElmer driver. SHOULD DELETE THIS AND JUST USE DETECTOR STATE.</td>
-        <td>
-          PE_STATUS</td>
-        <td>
-          $(P)$(R)PE_STATUS_RBV</td>
-        <td>
-          mbbi</td>
-      </tr>
-      <tr>
-        <td>
-          PE_SystemID</td>
-        <td>
-          asynInt32</td>
-        <td>
-          r/w</td>
-        <td>
-          PROM ID # used in communication with Perkin Elmer</td>
-        <td>
-          PE_SYSTEMID</td>
-        <td>
-          $(P)$(R)PESystemID</td>
-        <td>
-          longin</td>
+          bo</td>
       </tr>
       <tr>
         <td>
@@ -240,7 +220,7 @@
         <td>
           $(P)$(R)PETrigger</td>
         <td>
-          longout</td>
+          bo</td>
       </tr>
       <tr>
         <td>
@@ -257,7 +237,7 @@
         <td>
           $(P)$(R)PEFrameBuffIndex</td>
         <td>
-          longout</td>
+          longin</td>
       </tr>
       <tr>
         <td>
@@ -273,7 +253,58 @@
         <td>
           $(P)$(R)PEImageNumber</td>
         <td>
-          longout</td>
+          longin</td>
+      </tr>
+      <tr>
+        <td>
+          PE_Gain</td>
+        <td>
+          asynInt32</td>
+        <td>
+          r/w</td>
+        <td>
+          Gain selection in units of pF capacitance. Choices are 0.25, 0.5, 1, 2, 4, and 8.
+        </td>
+        <td>
+          PE_GAIN</td>
+        <td>
+          $(P)$(R)PEGain<br />
+          $(P)$(R)PEGain_RBV</td>
+        <td>
+          mbbo<br />
+          mbbi</td>
+      </tr>
+      <tr>
+        <td>
+          PE_SyncMode</td>
+        <td>
+          asynInt32</td>
+        <td>
+          r/w</td>
+        <td>
+          Synchronization mode. Choices are:
+          <ul>
+            <li>"DDD Clear" This mode has not been tested and clear documentation on it seems
+              to be missing.</li>
+            <li>"DDD No Clear" This is Data Delivered on Demand mode. It discards the next frame
+              and then starts acquiring a new frame for the specified acquisition time.</li>
+            <li>"Linewise" This is a specialized mode that requires an external timing source.
+              It has not been tested with the EPICS driver. See the manual for details.</li>
+            <li>"Framewise" This is the normal default mode. The next frame delivered from the
+              detector is stored.</li>
+            <li>"AutoTrigger" This mode is only available on the XRPAD. It automatically triggers
+              a readout when the number of x-rays striking the detecotor reaches a defined threashold.</li>
+          </ul>
+          See the <a href="#Synchronization">Synchronization and triggering</a> section below
+          for more details about synchronization and triggering. </td>
+        <td>
+          PE_SYNC_MODE</td>
+        <td>
+          $(P)$(R)PESyncMode<br />
+          $(P)$(R)PESyncMode_RBV</td>
+        <td>
+          mbbo<br />
+          mbbi</td>
       </tr>
       <tr>
         <td align="center" colspan="7">
@@ -342,7 +373,7 @@
         <td>
           $(P)$(R)PEUseOffset</td>
         <td>
-          mbbo</td>
+          bo</td>
       </tr>
       <tr>
         <td>
@@ -359,7 +390,7 @@
         <td>
           $(P)$(R)PEOffsetAvailable</td>
         <td>
-          mbbi</td>
+          bi</td>
       </tr>
       <tr>
         <td>
@@ -461,7 +492,7 @@
         <td>
           $(P)$(R)PEUseGain</td>
         <td>
-          mbbo</td>
+          bo</td>
       </tr>
       <tr>
         <td>
@@ -478,7 +509,55 @@
         <td>
           $(P)$(R)PEGainAvailable</td>
         <td>
-          mbbi</td>
+          bi</td>
+      </tr>
+      <tr>
+        <td>
+          PE_GainFile</td>
+        <td>
+          asynOctetWrite</td>
+        <td>
+          w</td>
+        <td>
+          File name for gain correction file</td>
+        <td>
+          PE_GAIN_FILE</td>
+        <td>
+          $(P)$(R)PEGainFile</td>
+        <td>
+          waveform</td>
+      </tr>
+      <tr>
+        <td>
+          PE_SaveGainFile</td>
+        <td>
+          asynInt32</td>
+        <td>
+          w</td>
+        <td>
+          Save gain corrections to a file</td>
+        <td>
+          PE_SAVE_GAIN_FILE</td>
+        <td>
+          $(P)$(R)PESaveGainFile</td>
+        <td>
+          bo</td>
+      </tr>
+      <tr>
+        <td>
+          PE_LoadGainFile</td>
+        <td>
+          asynInt32</td>
+        <td>
+          w</td>
+        <td>
+          Load gain corrections from a file</td>
+        <td>
+          PE_LOAD_GAIN_FILE</td>
+        <td>
+          $(P)$(R)PELoadGainFile</td>
+        <td>
+          bo</td>
       </tr>
       <tr>
         <td align="center" colspan="7">
@@ -498,7 +577,7 @@
         <td>
           $(P)$(R)PEUsePixelCorrection</td>
         <td>
-          mbbo</td>
+          bo</td>
       </tr>
       <tr>
         <td>
@@ -514,29 +593,23 @@
         <td>
           $(P)$(R)PEPixelCorrectionAvailable</td>
         <td>
-          mbbi</td>
+          bi</td>
       </tr>
       <tr>
         <td>
-          PE_BadPixelFile PE_BadPixelFile_RBV</td>
+          PE_PixelCorrectionFile</td>
         <td>
-          asynOctetWrite<br />
-          aynnOctetRead</td>
+          asynOctetWrite</td>
         <td>
           w</td>
         <td>
-          File name for bad pixel file</td>
+          File name for pixel correction file</td>
         <td>
-          PE_BAD_PIXEL_FILE</td>
+          PE_PIXEL_CORRECTION_FILE</td>
         <td>
-          $(P)$(R)PEBadPixelFile<br />
-          $(P)$(R)PEBadPixelFile_RBV</td>
+          $(P)$(R)PEPixelFile</td>
         <td>
           waveform</td>
-      </tr>
-      <tr>
-        <td align="center" colspan="7">
-          <b>Load/Save offset/gain corrections</b></td>
       </tr>
       <tr>
         <td>
@@ -546,7 +619,7 @@
         <td>
           r/w</td>
         <td>
-          Directory where corrections files should be stored</td>
+          Directory where gain and pixel correction files should be stored</td>
         <td>
           PE_CORRECTIONS_DIRECTORY</td>
         <td>
@@ -556,35 +629,62 @@
       </tr>
       <tr>
         <td>
-          PE_LoadCorrectionsFile</td>
+          PE_LoadPixelCorrectionFile</td>
         <td>
           asynInt32</td>
         <td>
           w</td>
         <td>
-          Load offset and gain corrections from a file for use</td>
+          Load pixel corrections from a file for use</td>
         <td>
-          PE_LOAD_CORRECTION_FILES</td>
+          PE_LOAD_PIXEL_CORRECTION_FILE</td>
         <td>
-          $(P)$(R)PELoadCorrections</td>
+          $(P)$(R)PELoadPixelCorrections</td>
         <td>
-          longout</td>
+          bo</td>
+      </tr>
+      <tr>
+        <td align="center" colspan="7">
+          <b>Skip frames settings</b></td>
       </tr>
       <tr>
         <td>
-          PE_SaveCorrectionsFile</td>
+          PE_SkipFrames</td>
         <td>
           asynInt32</td>
         <td>
-          w</td>
+          r/w</td>
         <td>
-          Save offset and gain corrections to a file</td>
+          Set whether to skip initial PENumFramesToSkip frames from the detector on each acquisition.
+          This can be used to discard the first frame which may contain data from before acquisition
+          was started.</td>
         <td>
-          PE_SAVE_CORRECTION_FILES</td>
+          PE_SKIP_FRAMES</td>
         <td>
-          $(P)$(R)PESaveCorrections</td>
+          $(P)$(R)PESkipFrames<br />
+          $(P)$(R)PESkipFrames_RBV</td>
         <td>
-          longout</td>
+          bo<br />
+          bi</td>
+      </tr>
+      <tr>
+        <td>
+          PE_NumFramesToSkip</td>
+        <td>
+          asynInt32</td>
+        <td>
+          r/w</td>
+        <td>
+          Sets the number of initial frames from the detector to skip on each acquisition
+          if PESkipFrames=1.</td>
+        <td>
+          PE_NUM_FRAMES_TO_SKIP</td>
+        <td>
+          $(P)$(R)PENumFramesToSkip<br />
+          $(P)$(R)PENumFramesToSkip_RBV</td>
+        <td>
+          longout<br />
+          longin</td>
       </tr>
     </tbody>
   </table>
@@ -598,6 +698,135 @@
     <li>Type/Color (NDDataType, NDColorMode)</li>
     <li>File (None of the file parameters in NDFile)</li>
     <li>No Hardware shutter control </li>
+  </ul>
+  <h2 id="Synchronization">
+    Synchronization and triggering</h2>
+  <p>
+    The Perkin Elmer detectors support a number of acquisition modes which are controlled
+    by the TriggerMode, SyncMode, and AcquireTime records. This is a simplified discussion,
+    and the reader should consult the <a href="1000952_Manual_XIS_Rev7.pdf">XIS software
+      manual</a> and the detector hardware manuals (e.g. <a href="Manual_PKIaSi_XRD1621 2008-07-30.pdf">
+        1621 hardware manual</a>) for details.</p>
+  <p>
+    The number of frames to be acquired is always controlled by the ImageMode=(Single,
+    Multiple, or Continuous) and NumImages (if ImageMode=Multiple) records, regardless
+    of the values of the TriggerMode, SyncMode, and AcquireTime records.</p>
+  <p>
+    It is important to realize that the detector hardware is constantly acquiring a
+    stream of frames even when the EPICS Acquire record is 0. The rate of this frame
+    stream depends on the value of the TriggerMode:</p>
+  <ul>
+    <li>TriggerMode="Free Running" The frame rate is the maximum that the detector supports.</li>
+    <li>TriggerMode="Internal" The frame rate is controlled by an internal clock whose
+      period is set to AcquireTime.</li>
+    <li>TriggerMode="External" The frame rate is controlled by the frequency of the external
+      trigger pulses.</li>
+    <li>TriggerMode="Soft Trigger" The frame rate is controlled by the rate at which the
+      PETrigger record is processed.</li>
+  </ul>
+  <p>
+    When SyncMode=Framewise and acquisition is started by setting Acquire=1 then the
+    first frame that the EPICS driver collects is the next frame in that frame stream.
+    <b>NOTE:</b> this means that this frame probably started exposing before Acquire
+    was set to 1. This may not be desirable since motors may have still been moving,
+    or a shutter not yet opened. When acquiring a sequence of images (ImageMode=Multiple)
+    this would only affect the first image in the sequence, which might be acceptable.
+    However, if doing a step-scan with ImageMode=Single it would affect every image
+    in the scan. There are two ways to handle this. One is to use SyncMode=Framewise
+    and set PENumFramesToSkip=1. This is quite inefficient since on average it will
+    have an overhead of AcquireTime/2, and a worst case overhead of AcquireTime. A better
+    approach is to set FrameSync="DDD No Clear", which adds a small overhead to each
+    frame (~0.1-0.2 seconds), but ensures that the exposure is started after Acquire
+    is set to 1.</p>
+  <h3>
+    TriggerMode=Free Running</h3>
+  <p>
+    In this mode the AcquireTime is ignored, and the detector runs at the maximum possible
+    frame rate and a fixed minimum exposure time. SyncMode should be set to Framewise
+    in this mode.</p>
+  <h3>
+    TriggerMode=Internal</h3>
+  <p>
+    In this mode the behavior depends on the setting of SyncMode.</p>
+  <ul>
+    <li>If SyncMode="Framewise" then the detector hardware is constantly acquiring a stream
+      of images with a frame rate determined by the AcquireTime record, up to the maximum
+      frame rate the detector is capable of. When Acquire is set to 1 then this driver
+      begins acquiring the images and doing callbacks to plugins. This is the fastest
+      way to run the detector with a user-programmable acquisition time. However, it suffers
+      from the limitation described above that the first frame after Acquire is set to
+      1 actually was being exposed before Acquire was set to 1. This may not be desired,
+      particularly when ImageMode=Single. <b>NOTE:</b> the XRPAD detectors cannot use
+      this mode because they are limited to a single internal frame rate and the AcquireTime
+      record has no effect in this mode.</li>
+    <li>If SyncMode="DDD No Clear" then the detector hardware is constantly acquiring
+      a stream of images at the maximum possible frame rate. However, when Acquire is
+      set to 1 this driver sends a software trigger to the detector. This causes the hardware
+      to discard the next frame when it arrives and to start a new exposure with an exposure
+      time of AcquireTime. When the frame completes then the driver sends the next software
+      trigger in the frame callback function. When running in this mode there is no limitation
+      on the first frame containing data from before Acquire was set to 1. It does have
+      the limitation that there is additional overhead per frame, so the maximum frame
+      rate is reduced. On the XRD1621 this overhead is ~0.2 second in 2048x2048 mode,
+      and ~0.1 seconds in 1024x1024 mode. This mode is recommended when running with ImageMode=Single.
+      If running with ImageMode=Multiple then this mode should be used if the first frame
+      limitation described above is a problem. If the limitation of "DDD No Clear" mode
+      on frame rate is more important than the limitation of "Framewise" mode on the first
+      frame then one should use SyncMode="Framewise". </li>
+  </ul>
+  <h3>
+    TriggerMode=External</h3>
+  <p>
+    In this mode the behavior also depends on the setting of SyncMode.</p>
+  <ul>
+    <li>If SyncMode="Framewise" then the detector hardware is constantly acquiring a stream
+      of images with a frame rate determined by the time between external trigger pulses,
+      up to the maximum frame rate the detector is capable of. When Acquire is set to
+      1 then this driver begins acquiring the images and doing callbacks to plugins. This
+      is the fastest way to run the detector with an external trigger. However, it has
+      some potential problems. First, if the time between external triggers is not constant
+      then the exposure time of the frames will be different. This can lead to serious
+      data quality issues because the offset correction will not be correct. If the time
+      between trigger pulses is constant then there is still a potential data quality
+      problem if the offset images were not collected with exactly the time acquisition
+      time, for example if they will collected with an TriggerMode=Internal and a slightly
+      different acquisition time. Of course this is not an issue if the offset images
+      are acquired with the same external trigger period used for the data images, but
+      this may be difficult to arrange in practice.</li>
+    <li>If SyncMode="DDD No Clear" then the detector hardware is constantly acquiring
+      a stream of images at the maximum possible frame rate. However, when an external
+      trigger pulse is received this causes the hardware to discard the next frame when
+      it arrives and to start a new exposure with an exposure time of AcquireTime. This
+      mode thus allows acquiring for a fixed exposure time on each external trigger, rather
+      than the time until the next trigger is received. This means that offset images
+      can be simply collected with TriggerMode=Internal and the same AcquireTime. This
+      mode does have the limitation that there is additional overhead per frame, so the
+      maximum frame rate is reduced. The overhead is the same as described above for TriggerMode=Internal,
+      SyncMode=""Framewise".</li>
+  </ul>
+  <h3>
+    TriggerMode="Soft Trigger"</h3>
+  <p>
+    In this mode the behavior also depends on the setting of SyncMode.</p>
+  <ul>
+    <li>If SyncMode="Framewise" then the detector hardware is constantly acquiring a stream
+      of images with a frame rate determined by the time between software triggers from
+      the PETrigger record, up to the maximum frame rate the detector is capable of. When
+      Acquire is set to 1 then this driver begins acquiring the images and doing callbacks
+      to plugins. This is the fastest way to run the detector with a software trigger.
+      However, it has the same potential problems as TriggerMode=External and SyncMode="Framewise"
+      described above. In the case of software triggers the problem may be even more important
+      if the time between software triggers has significant variation.</li>
+    <li>If SyncMode="DDD No Clear" then the detector hardware is constantly acquiring
+      a stream of images at the maximum possible frame rate. However, when a software
+      trigger is received this causes the hardware to discard the next frame when it arrives
+      and to start a new exposure with an exposure time of AcquireTime. This mode thus
+      allows acquiring for a fixed exposure time on each software trigger, rather than
+      the time until the next software trigger is received. This means that offset images
+      can be simply collected with TriggerMode=Internal and the same AcquireTime. This
+      mode does have the limitation that there is additional overhead per frame, so the
+      maximum frame rate is reduced. The overhead is the same as described above for TriggerMode=Internal,
+      SyncMode=""Framewise".</li>
   </ul>
   <h2 id="Configuration">
     Configuration</h2>
