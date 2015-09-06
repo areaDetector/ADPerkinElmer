@@ -110,7 +110,6 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
   IDValue_ = epicsStrDup(IDValue);
 
   /* Add parameters for this driver */
-  createParam(PE_SystemIDString,                    asynParamInt32,   &PE_SystemID);
   createParam(PE_InitializeString,                  asynParamInt32,   &PE_Initialize);
   createParam(PE_AcquireOffsetString,               asynParamInt32,   &PE_AcquireOffset);
   createParam(PE_NumOffsetFramesString,             asynParamInt32,   &PE_NumOffsetFrames);
@@ -131,7 +130,6 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
   createParam(PE_PixelCorrectionFileString,         asynParamOctet,   &PE_PixelCorrectionFile);
   createParam(PE_LoadPixelCorrectionFileString,     asynParamInt32,   &PE_LoadPixelCorrectionFile);
   createParam(PE_GainString,                        asynParamInt32,   &PE_Gain);
-  createParam(PE_DwellTimeString,                   asynParamInt32,   &PE_DwellTime);
   createParam(PE_NumFrameBuffersString,             asynParamInt32,   &PE_NumFrameBuffers);
   createParam(PE_TriggerString,                     asynParamInt32,   &PE_Trigger);
   createParam(PE_SyncModeString,                    asynParamInt32,   &PE_SyncMode);
@@ -150,14 +148,12 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
   //Detector parameter defaults
   status |= setIntegerParam(PE_NumFrameBuffers, 10);
   status |= setIntegerParam(PE_Gain, 0);
-  status |= setIntegerParam(PE_DwellTime, 0);
-  status |= setIntegerParam(PE_SystemID, 0);
   status |= setIntegerParam(PE_Initialize, 0);
   status |= setIntegerParam(PE_AcquireOffset, 0);
-  status |= setIntegerParam(PE_OffsetAvailable, NOT_AVAILABLE);
+  status |= setIntegerParam(PE_OffsetAvailable, 0);
   status |= setIntegerParam(PE_AcquireGain, 0);
-  status |= setIntegerParam(PE_GainAvailable, NOT_AVAILABLE);
-  status |= setIntegerParam(PE_PixelCorrectionAvailable, NOT_AVAILABLE);
+  status |= setIntegerParam(PE_GainAvailable, 0);
+  status |= setIntegerParam(PE_PixelCorrectionAvailable, 0);
   status |= setStringParam (PE_CorrectionsDirectory, "");
   status |= setStringParam (PE_GainFile, "");
   status |= setStringParam (PE_PixelCorrectionFile, "");
@@ -233,7 +229,6 @@ bool PerkinElmer::initializeDetector(void)
   double m_pTimingsListBinning[8];
   int status = asynSuccess;
   int iGain;
-  int iTimeIndex;
   long lPacketDelay;
   WORD wTiming;
   unsigned int uiPEResult;
@@ -250,7 +245,6 @@ bool PerkinElmer::initializeDetector(void)
 
   status |= getIntegerParam(PE_NumFrameBuffers, (int *)&uiNumFrameBuffers_);
   status |= getIntegerParam(PE_Gain, &iGain);
-  status |= getIntegerParam(PE_DwellTime, &iTimeIndex);
   if (status)
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
               "%s:%s: error getting parameters\n",
@@ -416,9 +410,7 @@ bool PerkinElmer::initializeDetector(void)
   status |= setIntegerParam(ADSizeY, uiRows_);
   status |= setIntegerParam(NDArraySizeX, uiColumns_);
   status |= setIntegerParam(NDArraySizeY, uiRows_);
-  status |= setIntegerParam(PE_SystemID, dwSystemID_);
   status |= setIntegerParam(PE_Gain, iGain);
-  status |= setIntegerParam(PE_DwellTime, iTimeIndex);
   status |= setIntegerParam(PE_NumFrameBuffers, uiNumFrameBuffers_);
   status |= setIntegerParam(ADStatus, ADStatusIdle);
 
@@ -478,7 +470,7 @@ void PerkinElmer::setBinning(void)
       "%s:%s:  set binning %d x %d, PEBinning=%d\n", 
       driverName, functionName, binX, binY, PEBinning);
     // If the binning changes then the offset needs to be collected again.
-    setIntegerParam(PE_OffsetAvailable, NOT_AVAILABLE);
+    setIntegerParam(PE_OffsetAvailable, 0);
     if (pOffsetBuffer_ != NULL)
       free(pOffsetBuffer_);
     pOffsetBuffer_ = NULL;
@@ -531,7 +523,6 @@ void PerkinElmer::report(FILE *fp, int details)
     fprintf(fp, "  Device sort flags: %d\n", uiSortFlags_);
     fprintf(fp, "  IRQ enabled:       %d\n", bEnableIRQ_);
     fprintf(fp, "  Acquisition type:  %d\n", dwAcqType_);
-    fprintf(fp, "  SystemID:          %d\n", dwSystemID_);
     fprintf(fp, "  Sync mode:         %d\n", dwSyncMode_);
     if (cHwHeaderInfo_.dwHeaderID >= 14) {
       // This detector supports CHwHeaderInfoEx
@@ -934,7 +925,7 @@ void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
     setIntegerParam(PE_AcquireOffset, 0);
       /* raise a flag to the user if offset data is available */
       if (pOffsetBuffer_ != NULL) {
-        setIntegerParam(PE_OffsetAvailable, AVAILABLE);
+        setIntegerParam(PE_OffsetAvailable, 1);
         /* Subtract the offset constant from the offset
          * Doing this here is much more efficient that doing it when correcting the offset
          * on every frame */
@@ -953,7 +944,7 @@ void PerkinElmer::endAcqCallback(HACQDESC hAcqDesc)
     setIntegerParam(PE_AcquireGain, 0);
     /* raise a flag to the user if gain data is available */
     if (pGainBuffer_ != NULL) {
-      setIntegerParam(PE_GainAvailable, AVAILABLE);
+      setIntegerParam(PE_GainAvailable, 1);
     }
     setShutter(ADShutterClosed);
     break;
@@ -1058,7 +1049,6 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
   else if (function == PE_LoadPixelCorrectionFile) {
     loadPixelCorrectionFile();
   }
-
 
   else {
     /* If this parameter belongs to a base class call its method */
@@ -1309,7 +1299,7 @@ void PerkinElmer::acquireOffsetImage (void)
 
   iAcqMode_ = PE_ACQUIRE_OFFSET;
   setIntegerParam(PE_CurrentOffsetFrame, 0);
-  setIntegerParam(PE_OffsetAvailable, NOT_AVAILABLE);
+  setIntegerParam(PE_OffsetAvailable, 0);
   
   // Make sure the shutter is closed
   setShutter(ADShutterClosed);
@@ -1360,7 +1350,7 @@ void PerkinElmer::acquireGainImage(void)
 
   iAcqMode_ = PE_ACQUIRE_GAIN;
   setIntegerParam(PE_CurrentGainFrame, 0);
-  setIntegerParam(PE_GainAvailable, NOT_AVAILABLE);
+  setIntegerParam(PE_GainAvailable, 0);
   setShutter(ADShutterOpen);
 
   uiPEResult = Acquisition_Acquire_GainImage(hAcqDesc_, pOffsetBuffer_, pGainBuffer_, uiRows_, uiColumns_, iFrames);
@@ -1547,7 +1537,7 @@ asynStatus PerkinElmer::loadGainFile (void)
 
   fclose (pInputFile);
 
-  status |= setIntegerParam(PE_GainAvailable, AVAILABLE);
+  status |= setIntegerParam(PE_GainAvailable, 1);
   callParamCallbacks();
 
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
@@ -1572,7 +1562,7 @@ asynStatus PerkinElmer::loadPixelCorrectionFile()
   struct              stat stat_buffer;
   static const char   *functionName = "readPixelCorrectionFile";
   
-  setIntegerParam(PE_PixelCorrectionAvailable, NOT_AVAILABLE);
+  setIntegerParam(PE_PixelCorrectionAvailable, 0);
 
   getStringParam(PE_PixelCorrectionFile, sizeof(pixelCorrectionFile), pixelCorrectionFile);
   getStringParam(PE_CorrectionsDirectory, sizeof(pixelCorrectionPath), pixelCorrectionPath);
@@ -1665,7 +1655,7 @@ asynStatus PerkinElmer::loadPixelCorrectionFile()
   free (pBadPixelMap_);
   pBadPixelMap_ = NULL;
 
-  setIntegerParam(PE_PixelCorrectionAvailable, AVAILABLE);
+  setIntegerParam(PE_PixelCorrectionAvailable, 1);
   return asynSuccess;
 }
 
