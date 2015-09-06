@@ -63,58 +63,6 @@ typedef enum
 } PESyncMode_t;
 
 
-#define TIME0        0
-#define TIME0_STR    "66.5ms"
-#define TIME1        1
-#define TIME1_STR    "79.9ms"
-#define TIME2        2
-#define TIME2_STR    "99.8ms"
-#define TIME3        3
-#define TIME3_STR    "133.2ms"
-#define TIME4        4
-#define TIME4_STR    "199.9ms"
-#define TIME5        5
-#define TIME5_STR    "400.0ms"
-#define TIME6        6
-#define TIME6_STR    "999.8ms"
-#define TIME7        7
-#define TIME7_STR    "1999.8ms"
-
-
-#define GAIN0        0
-#define GAIN0_STR    "0.25pF"
-#define GAIN1        1
-#define GAIN1_STR    "0.5pF"
-#define GAIN2        2
-#define GAIN2_STR    "1pF"
-#define GAIN3        3
-#define GAIN3_STR    "2pF"
-#define GAIN4        4
-#define GAIN4_STR    "4pF"
-#define GAIN5        5
-#define GAIN5_STR    "8pF"
-
-typedef enum
-{
-  PE_STATUS_OK,
-  PE_STATUS_INITIALIZING,
-  PE_STATUS_RUNNING_OFFSET,
-  PE_STATUS_RUNNING_GAIN,
-  PE_STATUS_ERROR
-} PEStatus_t;
-
-typedef enum
-{
-  NOT_AVAILABLE,
-  AVAILABLE
-} Availability_t;
-
-typedef enum
-{
-  NO,
-  YES
-} YesNo_t;
-
 //______________________________________________________________________________________________
 
 class PerkinElmer;
@@ -140,9 +88,8 @@ public:
   ~PerkinElmer();
 
 protected:
-  int PE_SystemID;
-  #define PE_FIRST_PARAM PE_SystemID
   int PE_Initialize;
+#define PE_FIRST_PARAM PE_Initialize
   int PE_CorrectionsDirectory;
   int PE_AcquireOffset;
   int PE_NumOffsetFrames;
@@ -163,7 +110,6 @@ protected:
   int PE_PixelCorrectionFile;
   int PE_LoadPixelCorrectionFile;
   int PE_Gain;
-  int PE_DwellTime;
   int PE_NumFrameBuffers;
   int PE_Trigger;
   int PE_SyncMode;
@@ -251,7 +197,6 @@ private:
 #define PE_PixelCorrectionFileString        "PE_PIXEL_CORRECTION_FILE"
 #define PE_LoadPixelCorrectionFileString    "PE_LOAD_PIXEL_CORRECTION_FILE"
 #define PE_GainString                       "PE_GAIN"
-#define PE_DwellTimeString                  "PE_DWELL_TIME"
 #define PE_NumFrameBuffersString            "PE_NUM_FRAME_BUFFERS"
 #define PE_TriggerString                    "PE_TRIGGER"
 #define PE_SyncModeString                   "PE_SYNC_MODE"
