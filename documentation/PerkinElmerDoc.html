@@ -145,9 +145,7 @@
     PerkinElmer specific parameters</h2>
   <p>
     The PerkinElmer driver implements the following parameters in addition to those
-    in asynNDArrayDriver.h and ADDriver.h. Note that to reduce the width of this table
-    the parameter index variable names have been split into 2 lines, but these are just
-    a single name, for example <code>PerkinElmerXXX</code>.
+    in asynNDArrayDriver.h and ADDriver.h.
   </p>
   <table border="1" cellpadding="2" cellspacing="2" style="text-align: left">
     <tbody>
@@ -828,6 +826,14 @@
       maximum frame rate is reduced. The overhead is the same as described above for TriggerMode=Internal,
       SyncMode=""Framewise".</li>
   </ul>
+  <p>
+    It is important that the offset images are collected with the same SyncMode as the
+    data. If the offset images are collected with SyncMode=Framewise and the data are
+    collected with SyncMode="DDD No Clear" then the offset correction will not be correct,
+    even if both are collected with the same AcquireTime. When using SyncMode="DDD No
+    Clear" it is fine to collect the offset and data images with different values of
+    TriggerMode. For example the offset images could be collected with TriggerMode=Internal
+    and the data images collected with TriggerMode=External.</p>
   <h2 id="Configuration">
     Configuration</h2>
   <p>
