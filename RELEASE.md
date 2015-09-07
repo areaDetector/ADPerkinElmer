@@ -23,7 +23,7 @@ files respectively, in the configure/ directory of the appropriate release of th
 Release Notes
 =============
 
-R2-4 (XXX-September-2015)
+R2-3 (XXX-September-2015)
 ----
 * Added support for Data Delivered on Demand (DDD) mode. 
   There is a new record PESyncMode which allows selecting the CameraTriggerMode.  
@@ -38,7 +38,7 @@ R2-4 (XXX-September-2015)
     This is because the frame stream is constantly running, asynchronously to the acquistion command. 
     It just grabs the next image after acquisition is started, which can happen anytime between 
     0 and AcquireTime seconds after Acquire is set to 1. 
-    Previously this could be worked around by setting skip frames=1, but this is very inefficient. 
+    Previously this could be worked around by setting PENumSkipFrames=1, but this is inefficient. 
     DDD mode allows synchronously collecting a single frame.
   * DDD mode fixes significant problems in earlier versions of the driver when TriggerMode=External.
     If trigger mode is run with PESyncMode=Framewise (the only choice in previous versions) then the
