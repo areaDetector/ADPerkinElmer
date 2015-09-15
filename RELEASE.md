@@ -59,7 +59,6 @@ R2-3 (XXX-September-2015)
     are collected for the same time as the time between trigger pulses.
 * The driver code was signficantly rewritten to add the DDD mode support, make it simpler, 
   and to add debugging information on calls to the XIS library.
-* Changes for compatibility with ADCore R2-4, which moves some files to the ADExample repository.
 
 R2-2 (17-April-2015)
 ----

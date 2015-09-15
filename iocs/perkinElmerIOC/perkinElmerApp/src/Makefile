@@ -21,7 +21,7 @@ $(PROD_NAME)_LIBS += XISL
 testBinning_SRCS += testBinning
 testBinning_LIBS += XISL
 
-include $(ADEXAMPLE)/exampleApp/commonDriverMakefile
+include $(ADCORE)/ADApp/commonDriverMakefile
 
 #=============================
 
