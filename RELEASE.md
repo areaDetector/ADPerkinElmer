@@ -23,7 +23,7 @@ files respectively, in the configure/ directory of the appropriate release of th
 Release Notes
 =============
 
-R2-3 (XXX-September-2015)
+R2-3 (21-September-2015)
 ----
 * Added support for Data Delivered on Demand (DDD) mode. 
   There is a new record PESyncMode which allows selecting the CameraTriggerMode.  
