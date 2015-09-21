@@ -141,7 +141,6 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
 
   /* Set some default values for parameters */
   status =  setStringParam (ADManufacturer, "Perkin Elmer");
-  status |= setStringParam (ADModel, "XRD0820");
   status |= setIntegerParam(NDArraySize, 0);
   status |= setIntegerParam(NDDataType, NDUInt16);
 
@@ -401,6 +400,45 @@ bool PerkinElmer::initializeDetector(void)
   if (uiPEResult != HIS_ALL_OK) {
     return false;
   }
+
+  // Set ADModel based on HeaderID and Cameratype.  Table from XIS manual
+  // Default to older cameras with Header ID=13
+  status |= setStringParam (ADModel, "XRD[0840/1620/1640]xN");
+  if (cHwHeaderInfoEx_.wHeaderID == 14) {
+    switch (cHwHeaderInfoEx_.wCameratype) {
+      case 1:
+        status |= setStringParam (ADModel, "XRD [0820/1621/1641] xN");
+        break;
+      case 2:
+        status |= setStringParam (ADModel, "XRD [0820/1620/1621] xN");
+        break;
+      case 7:
+        status |= setStringParam (ADModel, "XRD 1640 xN ES");
+        break;
+      case 8:
+        status |= setStringParam (ADModel, "XRD 0822 xO");
+        break;
+      case 9:
+        status |= setStringParam (ADModel, "XRD 1622 xO");
+        break;
+      case 10:
+        status |= setStringParam (ADModel, "XRD 0822 xP");
+        break;
+      case 11:
+        status |= setStringParam (ADModel, "XRD 1622/1642 xP");
+        break;
+      case 12:
+        status |= setStringParam (ADModel, "XRD 1642 xP");
+        break;
+      case 13:
+        status |= setStringParam (ADModel, "XRPAD 4336/4343");
+        break;
+      case 15:
+        status |= setStringParam (ADModel, "XRD 1611 xP");
+        break;
+    }
+  }
+        
 
   //Update readback values
   status = 0;
