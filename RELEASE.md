@@ -35,7 +35,7 @@ R2-3 (22-September-2015)
     Previously with Single mode and TriggerMode=Internal the frame exposure actually started before
     Acquire was set to 1. 
     This means it might include some time when motors were still moving or before a shutter was open. 
-    This is because the frame stream is constantly running, asynchronously to the acquistion command. 
+    This is because the frame stream is constantly running, asynchronously to the acquisition command. 
     It just grabs the next image after acquisition is started, which can happen anytime between 
     0 and AcquireTime seconds after Acquire is set to 1. 
     Previously this could be worked around by setting PENumSkipFrames=1, but this is inefficient. 
@@ -57,7 +57,7 @@ R2-3 (22-September-2015)
     30Hz to 10Hz in 1K mode.
     Framewise mode is thus still useful for fast triggered acquisition as long as the offset images 
     are collected for the same time as the time between trigger pulses.
-* The driver code was signficantly rewritten to add the DDD mode support, make it simpler, 
+* The driver code was significantly rewritten to add the DDD mode support, make it simpler, 
   and to add debugging information on calls to the XIS library.
 
 R2-2 (17-April-2015)
