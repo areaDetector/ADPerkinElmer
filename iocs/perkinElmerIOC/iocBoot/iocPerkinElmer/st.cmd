@@ -32,6 +32,9 @@ epicsEnvSet("EPICS_DB_INCLUDE_PATH", "$(ADCORE)/db")
 # This is for the first PCI/PCIExpress frame grabber detector in the system
 PerkinElmerConfig("$(PORT)", 0, "", 0, 0, 0, 0)
 
+# This is for a PCI/PCIExpress frame grabber detector with SystemID 751
+#PerkinElmerConfig("$(PORT)", 0, "751", 0, 0, 0, 0)
+
 # This is for a GigE detector at IP address 164.54.160.204
 #PerkinElmerConfig("$(PORT)", 1, 164.54.160.204, 0, 0, 0, 0)
 
