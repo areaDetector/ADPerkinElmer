@@ -54,7 +54,10 @@ static void exitCallbackC(void *drvPvt);
 /** Configuration command for Perkin Elmer driver; creates a new PerkinElmer object.
   * \param[in] portName The name of the asyn port driver to be created.
   * \param[in] IDType The type of system ID being specifed in IDValue.  Allowed values are:<br/>
-  *  IDType = 0 Frame grabber card, IDValue = "" (currently always uses the first frame grabber card)<br/>
+  *  IDType = 0 Frame grabber card, IDValue = detector SystemID. 
+  *             If IDValue="" then use the first frame grabber card in system.
+  *             SystemID can be determined by running the IOC with IDValue="" and typing
+  *             the command "asynReport 1 portName". The SystemID will be displayed.<br/>
   *  IDType = 1 GigE detector, IDValue = IP address (e.g. 164.54.160.21)<br/>
   *  IDType = 2 GigE detector, IDValue = MAC address (e.g. 00005b032e6b, must be lower-case letters)<br/>
   *  IDType = 3 GigE detector, IDValue = detector name (e.g. 8#2608).  Can get network detector names with asynReport(10)
