@@ -54,14 +54,14 @@ static void exitCallbackC(void *drvPvt);
 /** Configuration command for Perkin Elmer driver; creates a new PerkinElmer object.
   * \param[in] portName The name of the asyn port driver to be created.
   * \param[in] IDType The type of system ID being specifed in IDValue.  Allowed values are:<br/>
-  *  IDType = 0 Frame grabber card, IDValue = detector SystemID. 
-  *             If IDValue="" then use the first frame grabber card in system.
-  *             SystemID can be determined by running the IOC with IDValue="" and typing
+  *  IDType = 0 Frame grabber card, IDValue = detector SystemID.<br/> 
+  *             If IDValue="" then use the first frame grabber card in the system.<br/>
+  *             SystemID can be determined by running the IOC with IDValue="" and typing<br/>
   *             the command "asynReport 1 portName". The SystemID will be displayed.<br/>
   *  IDType = 1 GigE detector, IDValue = IP address (e.g. 164.54.160.21)<br/>
   *  IDType = 2 GigE detector, IDValue = MAC address (e.g. 00005b032e6b, must be lower-case letters)<br/>
   *  IDType = 3 GigE detector, IDValue = detector name (e.g. 8#2608).  Can get network detector names with asynReport(10)
-  * \param[in] IDValue The detector ID as explained above (IP name, MAC address, detector name)
+  * \param[in] IDValue The detector ID as explained above (SystemID, IP name, MAC address, or detector name)
   * \param[in] maxBuffers The maximum number of NDArray buffers that the NDArrayPool for this driver is 
   *            allowed to allocate. Set this to -1 to allow an unlimited number of buffers.
   * \param[in] maxMemory The maximum amount of memory that the NDArrayPool for this driver is 
@@ -82,14 +82,14 @@ extern "C" int PerkinElmerConfig(const char *portName, int IDType, const char *I
   * and sets reasonable default values the parameters defined in this class, asynNDArrayDriver, and ADDriver.
   * \param[in] portName The name of the asyn port driver to be created.
   * \param[in] IDType The type of system ID being specifed in IDValue.  Allowed values are:<br/>
-  *  IDType = 0 Frame grabber card, IDValue = detector SystemID. 
-  *             If IDValue="" then use the first frame grabber card in system.
-  *             SystemID can be determined by running the IOC with IDValue="" and typing
+  *  IDType = 0 Frame grabber card, IDValue = detector SystemID.<br/> 
+  *             If IDValue="" then use the first frame grabber card in the system.<br/>
+  *             SystemID can be determined by running the IOC with IDValue="" and typing<br/>
   *             the command "asynReport 1 portName". The SystemID will be displayed.<br/>
   *  IDType = 1 GigE detector, IDValue = IP address (e.g. 164.54.160.21)<br/>
   *  IDType = 2 GigE detector, IDValue = MAC address (e.g. 00005b032e6b, must be lower-case letters)<br/>
   *  IDType = 3 GigE detector, IDValue = detector name (e.g. 8#2608).  Can get network detector names with asynReport(10)
-  * \param[in] IDValue The detector ID as explained above (IP name, MAC address, detector name)
+  * \param[in] IDValue The detector ID as explained above (SystemID, IP name, MAC address, or detector name)
   * \param[in] maxBuffers The maximum number of NDArray buffers that the NDArrayPool for this driver is 
   *            allowed to allocate. Set this to -1 to allow an unlimited number of buffers.
   * \param[in] maxMemory The maximum amount of memory that the NDArrayPool for this driver is 
