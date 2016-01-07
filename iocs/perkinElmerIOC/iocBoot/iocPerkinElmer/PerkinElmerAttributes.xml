@@ -2,7 +2,7 @@
 <!-- Attributes -->
 <Attributes
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://epics.aps.anl.gov/areaDetector/attributes ../attributes.xsd"
+    xsi:noNamespaceSchemaLocation="../../../../../ADCore/XML_schema/NDAttributes.xsd"
     >
     <Attribute name="PhiMotorRBV"         type="EPICS_PV" source="13BMC:m33.RBV"                dbrtype="DBR_NATIVE"  description="Phi motor position"/>
     <Attribute name="RingCurrent"         type="EPICS_PV" source="S:SRcurrentAI"                dbrtype="DBR_NATIVE"  description="Storage ring current"/>
