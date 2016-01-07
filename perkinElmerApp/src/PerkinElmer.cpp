@@ -224,6 +224,8 @@ bool PerkinElmer::initializeDetector(void)
 {
   ACQDESCPOS Pos = 0;
   WORD wBinning = 1;
+  int systemID;
+  int i;
   int timings = 8;
   double m_pTimingsListBinning[8];
   int status = asynSuccess;
@@ -259,15 +261,48 @@ bool PerkinElmer::initializeDetector(void)
       if (uiPEResult != HIS_ALL_OK) {
         return false;
       }
+      if (uiNumSensors_ < 1) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+          "%s:%s: No detectors found in system.\n",
+          driverName, functionName);
+        return false;
+      }
       asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
-        "%s:%s: Total of %d sensors found. This driver will only control the first frame grabber.\n",
+        "%s:%s: Total of %d sensors found.\n",
         driverName, functionName, uiNumSensors_);
 
       Pos = NULL;
-      uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc_);
-      reportXISStatus(uiPEResult, functionName, "Acquisition_GetNextSensor(&Pos=%p, hAcqDesc_=%p)\n",
-        &Pos, &hAcqDesc_);
-      if (uiPEResult != HIS_ALL_OK) {
+      hAcqDesc_ = NULL;
+      systemID = atoi(IDValue_);
+      for (i=0; i<uiNumSensors_; i++) {
+        uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc_);
+        reportXISStatus(uiPEResult, functionName, "Acquisition_GetNextSensor(&Pos=%p, hAcqDesc_=%p)\n",
+          &Pos, &hAcqDesc_);
+        if (uiPEResult != HIS_ALL_OK) {
+          return false;
+        }
+        // If IDValue_ is an empty string use the first detector in the system
+        if (strlen(IDValue_) == 0) break;
+        //ask for data organization of sensor
+        uiPEResult = Acquisition_GetConfiguration(hAcqDesc_, (unsigned int *) &uiDevFrames_, 
+                                                  &uiRows_, &uiColumns_, &uiDataType_,
+                                                  &uiSortFlags_, &bEnableIRQ_, &dwAcqType_, 
+                                                  &dwSystemID_, &dwSyncMode_, &dwHwAccess_);
+        reportXISStatus(uiPEResult, functionName, 
+          "Acquisition_GetConfiguration(hAcqDesc_, uiDevFrames_=%u, uiRows_=%u, uiColumns_=%u, uiDataType_=%u, "
+          "uiSortFlags_=%u, bEnableIRQ_=%d, dwAcqType_=%d, dwSystemID_=%d, dwSyncMode_=%d, dwHwAccess_=%d)\n",
+          hAcqDesc_, (unsigned int *) uiDevFrames_, uiRows_, uiColumns_, uiDataType_,
+          uiSortFlags_, bEnableIRQ_, dwAcqType_, dwSystemID_, dwSyncMode_, dwHwAccess_);
+        if (uiPEResult != HIS_ALL_OK) {
+          return false;
+        }
+        // Is this the specified detector?
+        if (dwSystemID_ == systemID) break;
+      }
+      if (i == uiNumSensors_) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+          "%s:%s: error cannot find detector %s in system\n",
+          driverName, functionName, IDValue_); 
         return false;
       }
       break;
