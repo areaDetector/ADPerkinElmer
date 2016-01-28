@@ -25,7 +25,7 @@ Release Notes
 
 R2-4 (XXX-January-2016)
 ----
-* Added support for specifying the SystemID of a PCI/PCI Express or directly connected GigE detector.
+* Added support for specifying the system index # of a PCI/PCI Express or directly connected GigE detector.
   Previously it always used the first detector found in the system.  It is now possibly to have
   multiple detectors connected to a system, and to run multiple Perkin Elmer IOCs on a single computer.  
 
