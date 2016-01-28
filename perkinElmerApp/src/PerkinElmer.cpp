@@ -54,14 +54,12 @@ static void exitCallbackC(void *drvPvt);
 /** Configuration command for Perkin Elmer driver; creates a new PerkinElmer object.
   * \param[in] portName The name of the asyn port driver to be created.
   * \param[in] IDType The type of system ID being specifed in IDValue.  Allowed values are:<br/>
-  *  IDType = 0 Frame grabber card or directly connected GigE detector, IDValue = detector SystemID (e.g. 751).<br/> 
+  *  IDType = 0 Frame grabber card or directly connected GigE detector, IDValue = detector index # in system.<br/> 
   *  IDType = 1 GigE detector, IDValue = IP address (e.g. 164.54.160.21)<br/>
   *  IDType = 2 GigE detector, IDValue = MAC address (e.g. 00005b032e6b, must be lower-case letters)<br/>
   *  IDType = 3 GigE detector, IDValue = device name (e.g. 8#2608).  
-  * \param[in] IDValue The detector ID as explained above (SystemID, IP name, MAC address, or device name)<br/>
+  * \param[in] IDValue The detector ID as explained above (index #, IP name, MAC address, or device name)<br/>
   *            For IDType=0 then if IDValue="" then the first detector found in the system will be used.<br/>
-  *            SystemID can be determined by running the IOC with a single detector attached to the system,<br/>
-  *            setting IDValue="" and typing the command "asynReport 1 portName". The SystemID will be displayed.<br/>
   *            For IDType=3 the available device names on the network can be found with the command "asynReport 1 portName"
   * \param[in] maxBuffers The maximum number of NDArray buffers that the NDArrayPool for this driver is 
   *            allowed to allocate. Set this to -1 to allow an unlimited number of buffers.
@@ -83,14 +81,12 @@ extern "C" int PerkinElmerConfig(const char *portName, int IDType, const char *I
   * and sets reasonable default values the parameters defined in this class, asynNDArrayDriver, and ADDriver.
   * \param[in] portName The name of the asyn port driver to be created.
   * \param[in] IDType The type of system ID being specifed in IDValue.  Allowed values are:<br/>
-  *  IDType = 0 Frame grabber card or directly connected GigE detector, IDValue = detector SystemID (e.g. 751).<br/> 
+  *  IDType = 0 Frame grabber card or directly connected GigE detector, IDValue = detector index # in system.<br/> 
   *  IDType = 1 GigE detector, IDValue = IP address (e.g. 164.54.160.21)<br/>
   *  IDType = 2 GigE detector, IDValue = MAC address (e.g. 00005b032e6b, must be lower-case letters)<br/>
   *  IDType = 3 GigE detector, IDValue = device name (e.g. 8#2608).  
-  * \param[in] IDValue The detector ID as explained above (SystemID, IP name, MAC address, or device name)<br/>
+  * \param[in] IDValue The detector ID as explained above (index #, IP name, MAC address, or device name)<br/>
   *            For IDType=0 then if IDValue="" then the first detector found in the system will be used.<br/>
-  *            SystemID can be determined by running the IOC with a single detector attached to the system,<br/>
-  *            setting IDValue="" and typing the command "asynReport 1 portName". The SystemID will be displayed.<br/>
   *            For IDType=3 the available device names on the network can be found with the command "asynReport 1 portName"
   * \param[in] maxBuffers The maximum number of NDArray buffers that the NDArrayPool for this driver is 
   *            allowed to allocate. Set this to -1 to allow an unlimited number of buffers.
@@ -232,7 +228,7 @@ bool PerkinElmer::initializeDetector(void)
 {
   ACQDESCPOS Pos = 0;
   WORD wBinning = 1;
-  int systemID;
+  int detectorIndex;
   int i;
   int timings = 8;
   double m_pTimingsListBinning[8];
@@ -242,6 +238,7 @@ bool PerkinElmer::initializeDetector(void)
   WORD wTiming;
   unsigned int uiPEResult;
   bool bInitAlways = false;
+  bool detectorFound = false;
   BOOL bSelfInit = true;
   static const char* functionName = "initializeDetector";
 
@@ -281,36 +278,29 @@ bool PerkinElmer::initializeDetector(void)
 
       Pos = NULL;
       hAcqDesc_ = NULL;
-      systemID = atoi(IDValue_);
-      for (i=0; i<uiNumSensors_; i++) {
+      // If IDValue_ is an empty string use the first detector in the system
+      if (strlen(IDValue_) == 0) 
+        detectorIndex = 0;
+      else
+        detectorIndex = atoi(IDValue_);
+
+      for (i=0; i<(int)uiNumSensors_; i++) {
         uiPEResult = Acquisition_GetNextSensor(&Pos, &hAcqDesc_);
         reportXISStatus(uiPEResult, functionName, "Acquisition_GetNextSensor(&Pos=%p, hAcqDesc_=%p)\n",
           &Pos, &hAcqDesc_);
         if (uiPEResult != HIS_ALL_OK) {
           return false;
         }
-        // If IDValue_ is an empty string use the first detector in the system
-        if (strlen(IDValue_) == 0) break;
-        //ask for data organization of sensor
-        uiPEResult = Acquisition_GetConfiguration(hAcqDesc_, (unsigned int *) &uiDevFrames_, 
-                                                  &uiRows_, &uiColumns_, &uiDataType_,
-                                                  &uiSortFlags_, &bEnableIRQ_, &dwAcqType_, 
-                                                  &dwSystemID_, &dwSyncMode_, &dwHwAccess_);
-        reportXISStatus(uiPEResult, functionName, 
-          "Acquisition_GetConfiguration(hAcqDesc_, uiDevFrames_=%u, uiRows_=%u, uiColumns_=%u, uiDataType_=%u, "
-          "uiSortFlags_=%u, bEnableIRQ_=%d, dwAcqType_=%d, dwSystemID_=%d, dwSyncMode_=%d, dwHwAccess_=%d)\n",
-          hAcqDesc_, (unsigned int *) uiDevFrames_, uiRows_, uiColumns_, uiDataType_,
-          uiSortFlags_, bEnableIRQ_, dwAcqType_, dwSystemID_, dwSyncMode_, dwHwAccess_);
-        if (uiPEResult != HIS_ALL_OK) {
-          return false;
-        }
         // Is this the specified detector?
-        if (dwSystemID_ == systemID) break;
+        if (detectorIndex == i) {
+          detectorFound = true;
+          break;
+        }
       }
-      if (i == uiNumSensors_) {
+      if (!detectorFound) {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-          "%s:%s: error cannot find detector %s in system\n",
-          driverName, functionName, IDValue_); 
+          "%s:%s: error cannot find detector %d in system\n",
+          driverName, functionName, detectorIndex); 
         return false;
       }
       break;
