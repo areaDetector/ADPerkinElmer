@@ -30,10 +30,10 @@ epicsEnvSet("EPICS_DB_INCLUDE_PATH", "$(ADCORE)/db")
 #        = 3 GigE detector by detector name (e.g. 8#2608).  Can get network detector names with asynReport(10)
 
 # This is for the first PCI/PCIExpress frame grabber detector in the system
-PerkinElmerConfig("$(PORT)", 0, "", 0, 0, 0, 0)
+PerkinElmerConfig("$(PORT)", 0, "0", 0, 0, 0, 0)
 
-# This is for a PCI/PCIExpress frame grabber detector with SystemID 751
-#PerkinElmerConfig("$(PORT)", 0, "751", 0, 0, 0, 0)
+# This is for the second PCI/PCIExpress frame grabber detector in the system
+#PerkinElmerConfig("$(PORT)", 0, "1", 0, 0, 0, 0)
 
 # This is for a GigE detector at IP address 164.54.160.204
 #PerkinElmerConfig("$(PORT)", 1, 164.54.160.204, 0, 0, 0, 0)
