@@ -23,7 +23,7 @@ files respectively, in the configure/ directory of the appropriate release of th
 Release Notes
 =============
 
-R2-4 (XXX-January-2016)
+R2-4 (29-March-2016)
 ----
 * Added support for specifying the system index # of a PCI/PCI Express or directly connected GigE detector.
   Previously it always used the first detector found in the system.  It is now possibly to have
