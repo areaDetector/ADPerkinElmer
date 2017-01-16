@@ -43,6 +43,10 @@
 #include <epicsExport.h>
 #include "PerkinElmer.h"
 
+#define DRIVER_VERSION      2
+#define DRIVER_REVISION     5
+#define DRIVER_MODIFICATION 0
+
 // Forward function definitions
 static void CALLBACK endFrameCallbackC(HACQDESC hAcqDesc);
 static void CALLBACK endAcqCallbackC(HACQDESC hAcqDesc);
@@ -102,6 +106,7 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
     : ADDriver(portName, 1, (int)NUM_PERKIN_ELMER_PARAMS, maxBuffers, maxMemory, 0, 0, ASYN_CANBLOCK, 1, priority, stackSize)
 {
   int status = asynSuccess;
+  char versionString[20];
   static const char *functionName = "PerkinElmer";
 
   pAcqBuffer_           = NULL;
@@ -145,6 +150,9 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
 
   /* Set some default values for parameters */
   status =  setStringParam (ADManufacturer, "Perkin Elmer");
+  epicsSnprintf(versionString, sizeof(versionString), "%d.%d.%d", 
+                DRIVER_VERSION, DRIVER_REVISION, DRIVER_MODIFICATION);
+  setStringParam(NDDriverVersion, versionString);
   status |= setIntegerParam(NDArraySize, 0);
   status |= setIntegerParam(NDDataType, NDUInt16);
 
