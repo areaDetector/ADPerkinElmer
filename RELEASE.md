@@ -23,6 +23,12 @@ files respectively, in the configure/ directory of the appropriate release of th
 Release Notes
 =============
 
+R2-5 (20-February-2017)
+----
+* Added NDDriverVersion.
+* Fixed layout of medm screen for new ADSetup.adl from ADCore R2-6.
+
+
 R2-4 (29-March-2016)
 ----
 * Added support for specifying the system index # of a PCI/PCI Express or directly connected GigE detector.
