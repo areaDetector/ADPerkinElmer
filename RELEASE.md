@@ -23,6 +23,11 @@ files respectively, in the configure/ directory of the appropriate release of th
 Release Notes
 =============
 
+R2-6 (04-July-2017)
+----
+* Fixed layout of medm screen for ADCore R3-0.
+
+
 R2-5 (20-February-2017)
 ----
 * Added NDDriverVersion.
