@@ -934,14 +934,10 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
   getAttributes(pImage->pAttributeList);
 
   /* Call the NDArray callback */
-  /* Must release the lock here, or we can get into a deadlock, because we can
-   * block on the plugin lock, and the plugin can be calling us */
-  unlock();
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
     "%s:%s: calling imageData callback\n", 
     driverName, functionName);
   doCallbacksGenericPointer(pImage, NDArrayData, 0);
-  lock();
 
   done:
   
