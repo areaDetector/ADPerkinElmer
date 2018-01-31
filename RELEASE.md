@@ -23,6 +23,16 @@ files respectively, in the configure/ directory of the appropriate release of th
 Release Notes
 =============
 
+R2-7 (31-January-2018)
+----
+* Removed calls to release lock around calls to doCallbacksGenericPointer.
+* Fixed medm adl files to improve the autoconversion to other display manager files.
+* Added op/Makefile to automatically convert adl files to edl, ui, and opi files.
+* Updated the edl, ui, and opi autoconvert directories to contain the conversions
+  from the most recent adl files.
+
+
+
 R2-6 (04-July-2017)
 ----
 * Fixed layout of medm screen for ADCore R3-0.
