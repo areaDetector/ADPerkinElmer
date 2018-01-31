@@ -32,7 +32,6 @@ R2-7 (31-January-2018)
   from the most recent adl files.
 
 
-
 R2-6 (04-July-2017)
 ----
 * Fixed layout of medm screen for ADCore R3-0.
