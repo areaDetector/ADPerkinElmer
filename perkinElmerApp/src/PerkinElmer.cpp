@@ -44,7 +44,7 @@
 #include "PerkinElmer.h"
 
 #define DRIVER_VERSION      2
-#define DRIVER_REVISION     6
+#define DRIVER_REVISION     7
 #define DRIVER_MODIFICATION 0
 
 // Forward function definitions
