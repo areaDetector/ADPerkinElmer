@@ -22,6 +22,10 @@ files respectively, in the configure/ directory of the appropriate release of th
 
 Release Notes
 =============
+R2-9 (XXX-April-2019)
+----
+* Fixed error in loadGainFile().  It was using the PE_CorrectionsDirectory instead of PE_GainFile.
+
 
 R2-8 (2-July-2018)
 ----
