@@ -1570,7 +1570,7 @@ asynStatus PerkinElmer::loadGainFile (void)
     driverName, functionName);
 
   status |= getStringParam(PE_CorrectionsDirectory, sizeof(gainPath), gainPath);
-  status |= getStringParam(PE_CorrectionsDirectory, sizeof(gainFile), gainFile);
+  status |= getStringParam(PE_GainFile, sizeof(gainFile), gainFile);
   strcat(gainPath, gainFile);
 
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
