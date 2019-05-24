@@ -22,8 +22,16 @@ files respectively, in the configure/ directory of the appropriate release of th
 
 Release Notes
 =============
-R2-9 (XXX-April-2019)
+R2-9 (XXX-May-2019)
 ----
+* Fixed error reading bad pixel file.  There were 2 problems:
+  - The structures defined in Acq.h were not declared to be packed.  This caused the structures to be
+    read incorrectly from the bad pixel file. In particular the image dimensions were read wrong.
+    Added #pragma pack(1) when including Acq.h so these structures are packed.
+  - Because of the previous problem the driver was deliberately using the wrong fields in the structure to determine
+    the dimensions of the image array in the file (ULY, BRX, rather than BRX, BRY).  
+    If a compiler did do structure packing then the driver would crash in loadPixelCorrectionFile 
+    because the wrong structure members were being used.
 * Fixed error in loadGainFile().  It was using the PE_CorrectionsDirectory instead of PE_GainFile.
 
 
