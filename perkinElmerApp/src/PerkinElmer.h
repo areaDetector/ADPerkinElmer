@@ -19,7 +19,11 @@
 #include "ADDriver.h"
 
 #include <windows.h>
+
+// Structures defined in Acq.h must be packed
+#pragma pack(1)
 #include "Acq.h"
+#pragma pack()
 
 //______________________________________________________________________________________________
 
