@@ -401,7 +401,7 @@ bool PerkinElmer::initializeDetector(void)
   reportXISStatus(uiPEResult, functionName, 
     "Acquisition_GetConfiguration(hAcqDesc_, uiDevFrames_=%u, uiRows_=%u, uiColumns_=%u, uiDataType_=%u, "
     "uiSortFlags_=%u, bEnableIRQ_=%d, dwAcqType_=%d, dwSystemID_=%d, dwSyncMode_=%d, dwHwAccess_=%d)\n",
-    hAcqDesc_, (unsigned int *) uiDevFrames_, uiRows_, uiColumns_, uiDataType_,
+    hAcqDesc_, uiDevFrames_, uiRows_, uiColumns_, uiDataType_,
     uiSortFlags_, bEnableIRQ_, dwAcqType_, dwSystemID_, dwSyncMode_, dwHwAccess_);
   if (uiPEResult != HIS_ALL_OK) {
     return false;
@@ -691,7 +691,7 @@ void PerkinElmer::reportSensors(FILE *fp, int details)
       return;
     }
 
-    fprintf(fp, "  Sensor %d\n", Pos);
+    fprintf(fp, "  Sensor %p\n", (void *)Pos);
 
     // Ask for communication device type and its number
     if ((uiPEResult = Acquisition_GetCommChannel(hAcqDesc, &uiChannelType, &iChannelNum)) != HIS_ALL_OK) {
@@ -1670,6 +1670,20 @@ asynStatus PerkinElmer::loadPixelCorrectionFile()
     return asynError;
   }
 
+  // We were having problems because the file_header structure was not packed. 
+  // That is why these debug printf statements were added
+  /*
+  printf("FileType=%x\n",        file_header.FileType);
+  printf("HeaderSize=%d\n",      file_header.HeaderSize);
+  printf("HeaderVersion=%d\n",   file_header.HeaderVersion);
+  printf("FileSize=%d\n",        file_header.FileSize);
+  printf("ULX=%d, ULY=%d\n",     file_header.ULX, file_header.ULY);
+  printf("BRX=%d, BRY=%d\n",     file_header.BRX, file_header.BRY);
+  printf("NrOfFrames=%d\n",      file_header.NrOfFrames);
+  printf("Correction=%d\n",      file_header.Correction);
+  printf("IntegrationTime=%f\n", file_header.IntegrationTime);
+  printf("TypeOfNumbers=%d\n",   file_header.TypeOfNumbers);
+  */
 
   //read image header
   fread((void *) &image_header, 32, 1, pInputFile);
@@ -1679,11 +1693,11 @@ asynStatus PerkinElmer::loadPixelCorrectionFile()
       driverName, functionName, pixelCorrectionPath);
     return asynError;
   }
-
+  
   //read bad pixel map
   if (pBadPixelMap_ != NULL)
     free (pBadPixelMap_);
-  iBufferSize = file_header.ULY * file_header.BRX * sizeof (epicsUInt16);
+  iBufferSize = file_header.BRY * file_header.BRX * sizeof (epicsUInt16);
   pBadPixelMap_ = (epicsUInt16 *) malloc (iBufferSize);
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
     "%s:%s: buffer size: %d, pBadPixelMap: %d\n", 
@@ -1707,7 +1721,7 @@ asynStatus PerkinElmer::loadPixelCorrectionFile()
   fclose (pInputFile);
 
   int counter = 0;
-  for (int loop=0;loop<file_header.ULY * file_header.BRX;loop++) {
+  for (int loop=0;loop<file_header.BRY * file_header.BRX;loop++) {
     if (pBadPixelMap_[loop] == 65535)
       counter++;
   }
@@ -1717,15 +1731,15 @@ asynStatus PerkinElmer::loadPixelCorrectionFile()
 
   //first call with correction list = NULL returns size of buffer to allocate
   //second time gets the correction list
-  uiStatus = Acquisition_CreatePixelMap (pBadPixelMap_, file_header.ULY, file_header.BRX, NULL, &iCorrectionMapSize);
+  uiStatus = Acquisition_CreatePixelMap (pBadPixelMap_, file_header.BRY, file_header.BRX, NULL, &iCorrectionMapSize);
   reportXISStatus(uiStatus, functionName, 
     "Acquisition_CreatePixelMap (pBadPixelMap_=%p, nDataRows=%d, nDataColumns=%d, pCorrList=%p, iCorrectionMapSize=%d)\n", 
-    pBadPixelMap_, file_header.ULY, file_header.BRX, NULL, iCorrectionMapSize);
+    pBadPixelMap_, file_header.BRY, file_header.BRX, NULL, iCorrectionMapSize);
   pPixelCorrectionList_ = (int *) malloc (iCorrectionMapSize);
-  uiStatus = Acquisition_CreatePixelMap (pBadPixelMap_, file_header.ULY, file_header.BRX, pPixelCorrectionList_, &iCorrectionMapSize);
+  uiStatus = Acquisition_CreatePixelMap (pBadPixelMap_, file_header.BRY, file_header.BRX, pPixelCorrectionList_, &iCorrectionMapSize);
   reportXISStatus(uiStatus, functionName, 
     "Acquisition_CreatePixelMap (pBadPixelMap_=%p, nDataRows=%d, nDataColumns=%d, pCorrList=%p, iCorrectionMapSize=%d)\n", 
-    pBadPixelMap_, file_header.ULY, file_header.BRX, pPixelCorrectionList_, &iCorrectionMapSize);
+    pBadPixelMap_, file_header.BRY, file_header.BRX, pPixelCorrectionList_, &iCorrectionMapSize);
 
   free (pBadPixelMap_);
   pBadPixelMap_ = NULL;
