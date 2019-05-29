@@ -22,7 +22,7 @@ files respectively, in the configure/ directory of the appropriate release of th
 
 Release Notes
 =============
-R2-9 (XXX-May-2019)
+R2-9 (29-May-2019)
 ----
 * Fixed error reading bad pixel file.  There were 2 problems:
   - The structures defined in Acq.h were not declared to be packed.  This caused the structures to be
