@@ -1565,6 +1565,9 @@ asynStatus PerkinElmer::loadGainFile (void)
   struct stat stat_buffer;
   static const char *functionName = "loadGainFile";
 
+  WinHeaderType fileHeader;
+  WinImageHeaderType imageHeader;
+
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
     "%s:%s: Loading gain file...\n",
     driverName, functionName);
@@ -1582,36 +1585,87 @@ asynStatus PerkinElmer::loadGainFile (void)
       driverName, functionName, gainPath);
     return asynError;
   }
+  printf("1\n");
   if (pGainBuffer_ != NULL)
     free (pGainBuffer_);
-
+  printf("2\n");
   pInputFile = fopen (gainPath, "rb");
+  printf("3\n");
   if (pInputFile == NULL) {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
       "%s:%s: Failed to open gain correction file %s\n", 
       driverName, functionName, gainPath);
     return asynError;
   }
+
+  /*
+  printf("4\n");
   fread (&iSizeX, sizeof (int), 1, pInputFile);
+  printf("5\n");
   fread (&iSizeY, sizeof (int), 1, pInputFile);
+  printf("6\n");
   fread (&iByteDepth, sizeof (int), 1, pInputFile);
+  printf("7\n");
+  */
+
   if (ferror (pInputFile)) {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
       "%s:%s: Failed to read file header for gain correction file %s\n", 
       driverName, functionName, gainPath);
     return asynError;
   }
-  pGainBuffer_ = (DWORD *) malloc (iSizeX * iSizeY * iByteDepth);
-  fread (pGainBuffer_, iByteDepth, iSizeX * iSizeY, pInputFile);
+
+ 
+
+ fread(&fileHeader.FileType,sizeof(WORD),1,pInputFile);
+ fread(&fileHeader.HeaderSize,sizeof(WORD),1,pInputFile);
+ fread(&fileHeader.HeaderVersion,sizeof(WORD),1,pInputFile);
+ fread(&fileHeader.FileSize,sizeof(ULONG),1,pInputFile);
+ fread(&fileHeader.ImageHeaderSize,sizeof(WORD),1,pInputFile); 
+ fread(&fileHeader.ULX,sizeof(WORD),1,pInputFile);
+ fread(&fileHeader.ULY,sizeof(WORD),1,pInputFile);
+ fread(&fileHeader.BRX,sizeof(WORD),1,pInputFile);
+ fread(&fileHeader.BRY,sizeof(WORD),1,pInputFile); 
+ fread(&fileHeader.NrOfFrames,sizeof(WORD),1,pInputFile);
+ fread(&fileHeader.Correction,sizeof(WORD),1,pInputFile);
+ fread(&fileHeader.IntegrationTime,sizeof(double),1,pInputFile);
+ fread(&fileHeader.TypeOfNumbers,sizeof(WORD),1,pInputFile); 
+
+  // We were having problems because the file_header structure was not packed. 
+  // That is why these debug printf statements were added
+  
+  printf("FileType=%x\n",        fileHeader.FileType);
+  printf("HeaderSize=%d\n",      fileHeader.HeaderSize);
+  printf("HeaderVersion=%d\n",   fileHeader.HeaderVersion);
+  printf("FileSize=%d\n",        fileHeader.FileSize);
+  printf("ImageHeaderSize=%d\n", fileHeader.ImageHeaderSize);
+  printf("ULX=%d, ULY=%d\n",     fileHeader.ULX, fileHeader.ULY);
+  printf("BRX=%d, BRY=%d\n",     fileHeader.BRX, fileHeader.BRY);
+  printf("NrOfFrames=%d\n",      fileHeader.NrOfFrames);
+  printf("Correction=%d\n",      fileHeader.Correction);
+  printf("IntegrationTime=%f\n", fileHeader.IntegrationTime);
+  printf("TypeOfNumbers=%d\n",   fileHeader.TypeOfNumbers);
+  printf("sizeof(TypeOfNumbers)=%d\n",   sizeof(fileHeader.TypeOfNumbers));
+  
+  fread((void*)&imageHeader,fileHeader.ImageHeaderSize,1, pInputFile);
+
+  printf("8\n");
+  pGainBuffer_ = (DWORD *) malloc (fileHeader.BRX * fileHeader.BRY * (fileHeader.TypeOfNumbers/8));
+  printf("9\n");  
+  printf("iSizeX=%d, iSizeY=%d, iByteDepth=%d\n",iSizeX, iSizeY, iByteDepth);
+
+  fread (pGainBuffer_, (fileHeader.TypeOfNumbers/8) * fileHeader.BRX * fileHeader.BRY, 1, pInputFile);
+  
+
   if (ferror (pInputFile)) {
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
       "%s:%s: Failed to read data for gain correction file %s\n", 
       driverName, functionName, gainPath);
     return asynError;
   }
-
+  printf("11\n");
   fclose (pInputFile);
-
+  printf("12\n");
   status |= setIntegerParam(PE_GainAvailable, 1);
   callParamCallbacks();
 
