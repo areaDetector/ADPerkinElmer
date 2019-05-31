@@ -159,6 +159,9 @@ private:
   bool          acquireSettingsChanged_;
   bool          doSoftwareTriggers_; 
 
+  WinHeaderType fileHeader_;
+  WinImageHeaderType imageHeader_;
+
   bool initializeDetector (void);
   void setBinning(void);
   void reportSensors(FILE *fp, int details);
