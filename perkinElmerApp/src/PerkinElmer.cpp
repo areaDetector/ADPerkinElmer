@@ -1560,7 +1560,6 @@ asynStatus PerkinElmer::loadGainFile (void)
   int status = asynSuccess;
   char gainPath[256];
   char gainFile[256];
-  //int iSizeX, iSizeY, iByteDepth;
   FILE  *pInputFile;
   struct stat stat_buffer;
   static const char *functionName = "loadGainFile";
