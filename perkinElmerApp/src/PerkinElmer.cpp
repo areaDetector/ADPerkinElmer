@@ -1622,6 +1622,7 @@ asynStatus PerkinElmer::loadGainFile (void)
 
   // We were having problems because the file_header structure was not read properly. 
   // That is why these debug printf statements were added
+  /*
   printf("FileType=%x\n",        fileHeader.FileType);
   printf("HeaderSize=%d\n",      fileHeader.HeaderSize);
   printf("HeaderVersion=%d\n",   fileHeader.HeaderVersion);
@@ -1634,6 +1635,7 @@ asynStatus PerkinElmer::loadGainFile (void)
   printf("IntegrationTime=%f\n", fileHeader.IntegrationTime);
   printf("TypeOfNumbers=%d\n",   fileHeader.TypeOfNumbers);
   printf("sizeof(TypeOfNumbers)=%d\n",   sizeof(fileHeader.TypeOfNumbers));
+  */
   
   // Read Image Header = 32 bytes
   fread((void*)&imageHeader,fileHeader.ImageHeaderSize,1, pInputFile);
