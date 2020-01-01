@@ -49,6 +49,7 @@ of the standard driver parameters.
 .. flat-table::
   :header-rows: 2
   :widths: 20 80
+  :class: wy-table-responsive
 
   * - **Implementation of Parameters in asynNDArrayDriver.h and ADDriver.h, and EPICS Record
       Definitions in ADBase.template and NDFile.template**
@@ -92,6 +93,7 @@ to those in asynNDArrayDriver.h and ADDriver.h.
 .. flat-table::
   :header-rows: 2
   :widths: 70 10 10 10
+  :class: wy-table-responsive
 
   * - **Parameter Definitions in PerkinElmer.h and EPICS Record Definitions in PerkinElmer.template**
   * - Description
