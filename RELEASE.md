@@ -22,6 +22,11 @@ files respectively, in the configure/ directory of the appropriate release of th
 
 Release Notes
 =============
+R2-10 (9-January-2020)
+----
+* Updated vendor files to release 3.3.13115.  This release is compatible with Windows 10.
+* Converted documentation to ReST.
+
 R2-9 (29-May-2019)
 ----
 * Fixed error reading bad pixel file.  There were 2 problems:
