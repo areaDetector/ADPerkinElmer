@@ -1,3 +1,6 @@
+/** @file Acq.h*/
+
+
 #ifndef _ACQUISITION_H
 #define _ACQUISITION_H
 
@@ -24,29 +27,61 @@
 extern "C" {
 #endif  /* __cplusplus */
 
-//#define __X64 // Define this for the 64bit Driver Version
+#define __NOASM
+
+#define __X64 // Define this for the 64bit Driver Version
 #ifdef _WIN64
-#define __X64 
-#endif
-#ifdef __X64
-typedef void* ACQDESCPOS;
-#else
-typedef UINT ACQDESCPOS;
+#   ifndef __X64
+#       define __X64
+#   endif
 #endif
 
+#if defined(__X64)
+#	ifndef XIS_OS_64
+#		define XIS_OS_64
+#	endif
+#endif
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
+#ifdef __linux__   
+	#include "windefines.h"
+	#include "DataType.h"
+#endif
+
+
+#ifdef XIS_OS_64	// MERGE: think about these macros
+    /**
+    * @ingroup enum
+    */
+	typedef void* ACQDESCPOS;
+#else
+    /**
+    * @ingroup enum
+    */
+	typedef UINT ACQDESCPOS;
+#endif
+
+
+/** 
+* AcquisitionDesc defines a data structure that is 
+* used by all functions of XISL. It contains all 
+* required parameters for the acquisition.
+* Access to the data fields is only possible via 
+* the XISL API functions. HACQDESC defines a HANLDE to the acquisition descriptor.
+* @see AcquisitionDesc
+* @ingroup enum
+**/
+typedef HANDLE HACQDESC;
 #ifdef __linux__
-	typedef int HACQDESC;
+    /**
+    * @ingroup enum
+    */
+    typedef unsigned int DEX_RETURN;
 #else
 	// Windows
-	/** 
-	* AcquisitionDesc defines a data structure that is 
-	* used by all functions of XISL. It contains all 
-	* required parameters for the acquisition.
-	* Access to the data fields is only possible via 
-	* the XISL API functions. HACQDESC defines a HANLDE to the acquisition descriptor.
-	* @see AcquisitionDesc
-	**/
-	typedef HANDLE HACQDESC;
     #ifdef _DLL_EXPORT
 		#define _DLL_API __declspec(dllexport) 
     #else
@@ -54,13 +89,18 @@ typedef UINT ACQDESCPOS;
     #endif //_ACQDEFS_H
 
     #define HIS_RETURN _DLL_API UINT WINAPI
+	#define DEX_RETURN _DLL_API UINT WINAPI
     
 #endif
 
 
+#define _GBIF_1313
+
+
 #define WINRESTSIZE					34
 #define WINHARDWAREHEADERSIZE		32
-
+#define WINRESTSIZE101				32
+#define WINHARDWAREHEADERSIZEID15	2048
 #define DETEKTOR_DATATYPE_18BIT 16
 #define MAX_GREY_VALUE_18BIT  262144
 
@@ -93,9 +133,11 @@ typedef struct
 typedef struct
 {	
 	char	cDetectorType[32];															// e.g. XRD 0822 AO 14
-	char	cManufacturingDate[8];														// e.g. 06-2010
+	char	cManufacturingDate[8];														// e.g. 201012
 	char	cPlaceOfManufacture[8];														// e.g. DE
-	char	cDummy[80];
+    char    cUniqueDeviceIdentifier[16];
+    char    cDeviceIdentifier[16];
+	char	cDummy[48];
 } GBIF_Detector_Properties;
 
 #define HIS_GbIF_FIRST_CAM 0
@@ -173,24 +215,44 @@ typedef struct
 	WORD	wDummy;			// 1F
 }	CHwHeaderInfoEx;
 
-
+#pragma pack(push, 1)
 typedef struct
 {
 	WORD FileType;			// File ID (0x7000)
 	WORD HeaderSize;		// Size of this file header in Bytes
-	WORD HeaderVersion;		// yy.y
-	ULONG FileSize;			// Size of the whole file in Bytes
+	WORD HeaderVersion;		// 100
+    UINT FileSize;			// Size of the whole file in Bytes ( HeaderSize+ImageHeaderSize+Frames*rows*columns*datatypesize )
 	WORD ImageHeaderSize;	// Size of the image header in Bytes
 	WORD ULX, ULY, BRX, BRY;// bounding rectangle of the image
-	WORD NrOfFrames;		// self explanatory
-	WORD Correction;		// 0 = none, 1 = offset, 2 = gain, 4 = bad pixel, (ored)
-	double IntegrationTime;	// frame time in microseconds
-	WORD TypeOfNumbers;		// short, long integer, float, signed/unsigned, inverted, 
-							// fault map, offset/gain correction data, badpixel correction data
+	WORD NrOfFrames;		// Nr of Frames in seq
+	WORD Correction;		// 0 = none, 1 = offset, 2 = gain, 4 = bad pixel, (ored) can be 0
+	double IntegrationTime;	// frame time in microseconds can by 0
+	WORD TypeOfNumbers;		// refer to enum XIS_FileType
 	BYTE x[WINRESTSIZE];		// fill up to 68 byte
 } WinHeaderType;
 
-typedef struct
+
+
+
+typedef struct 
+{
+	WORD FileType;			// File ID (0x7000)
+	WORD HeaderSize;		// Size of this file header in Bytes
+	WORD HeaderVersion;		// 101
+	UINT FileSize;			// Size of the whole file in Bytes ( HeaderSize+ImageHeaderSize+Frames*rows*columns*datatypesize )
+	WORD ImageHeaderSize;	// Size of the image header in Bytes
+	WORD ULX, ULY, BRX, BRY;// bounding rectangle of the image
+	WORD NrOfFrames;		// Nr of Frames in seq
+	WORD Correction;		// 0 = none, 1 = offset, 2 = gain, 4 = bad pixel, (ored) can be 0
+	double IntegrationTime;	// frame time in microseconds
+	WORD TypeOfNumbers;		// refer to enum XIS_FileType
+	WORD wMedianValue;		// median of the image / can be 0. use 0 for onboard corrections. meadian for gain corr will be automatically calculated
+	BYTE x[WINRESTSIZE101];	// fill up to 68 byte
+} WinHeaderType101;
+
+#pragma pack(pop)
+
+typedef struct 
 {
 	DWORD	dwPROMID;
 	char	strProject[6];		// project / cam-nr
@@ -271,6 +333,542 @@ typedef struct EPC_REGISTER {
   
 }EPC_REGISTER;
 
+/* internal voltages and currents of Gen2 detector */
+typedef struct DETECTOR_CURRENT_VOLTAGE{
+  int iV1;
+  int imA1;
+  int iV2;
+  int imA2;
+  int iV3;
+  int imA3;
+}DETECTOR_CURRENT_VOLTAGE;
+
+/** Possible system control actions for XRpad 
+* @ingroup enum
+*/
+typedef enum {
+	XRpad_SYSTEM_CONTROL_REBOOT = 0,           // restart XRpad 
+	XRpad_SYSTEM_CONTROL_RESTART_NETWORK = 1,  // restart XRpad Network 
+	XRpad_SYSTEM_CONTROL_SHUTDOWN = 2,         // shutdown XRpad
+	XRpad_SYSTEM_CONTROL_SET_DEEP_SLEEP = 3,   // power down analog circuitry and sensor FPGA
+	XRpad_SYSTEM_CONTROL_SET_IDLE = 4          // power up analog circuitry and sensor FPGA
+} XRpad_SystemControlEnum;
+
+/**
+* @ingroup enum
+*/
+typedef struct XRpad_TempSensor
+{
+    char            index;
+    char            name[32];
+    BOOL            is_virtual;
+    unsigned char   warn_level;
+    double          temperature;
+} XRpad_TempSensor;
+
+/**
+* @ingroup enum
+*/
+typedef struct XRpad_TempSensorReport
+{
+    unsigned char   system_warn_level;
+    unsigned char   sensor_count;
+    unsigned int    shutdown_time;
+    XRpad_TempSensor sensors[16];
+} XRpad_TempSensorReport;
+
+
+/**
+* @ingroup enum
+*/
+typedef enum XRpad_ChargeMode
+{
+    XRpad_NOT_CHARGING = 0,
+    XRpad_CHARGING_SLOW = 1,
+    XRpad_CHARGING_NORMAL = 2,
+    XRpad_CHARGING_FAST = 3,
+    XRpad_FULLY_CHARGED = 4,
+    XRpad_DISCHARGING = 5
+} XRpad_ChargeMode;
+
+
+/**
+* @ingroup enum
+*/
+typedef enum XRpad_BatteryPresence
+{
+    XRpad_NO_BATTERY = 0,
+    XRpad_BATTERY_INSERTED = 1,
+    XRpad_DUMMY_INSERTED = 2
+} XRpad_BatteryPresence;
+
+
+/**
+* @ingroup enum
+*/
+typedef enum XRpad_BatteryHealth
+{
+    XRpad_BATTERY_OK                    = 0x0000,
+    XRpad_COMMUNICATION_ERROR           = 0x0001,
+    XRpad_TERMINATE_DISCHARGE_ALARM     = 0x0002,
+    XRpad_UNDERVOLTAGE_ALARM            = 0x0004,
+    XRpad_OVERVOLTAGE_ALARM             = 0x0008,
+    XRpad_OVERTEMPERATURE_ALARM         = 0x0010,
+    XRpad_BATTERY_UNKNOWN_ERROR         = 0x0080,
+
+} XRpad_BatteryHealth;
+
+
+/**
+* @ingroup enum
+*/
+typedef struct XRpad_BatteryStatus
+{
+    XRpad_BatteryPresence   presence;
+    int                     design_capacity;
+    int                     remaining_capacity;
+    int                     charge_state;
+    XRpad_ChargeMode        charge_mode;
+    int                     cycle_count;
+    int                     temperature;
+    int                     authenticated;
+    int                     health;
+} XRpad_BatteryStatus;
+
+
+
+/**
+ * @ingroup enum
+ */
+typedef struct XRpad_ShockEvent
+{
+    unsigned int    timestamp;
+    unsigned int    critical_sensor1;
+    unsigned int    critical_sensor2;
+    unsigned int    critical_sensor3;
+    unsigned int    warning_sensor1;
+    unsigned int    warning_sensor2;
+    unsigned int    warning_sensor3;
+} XRpad_ShockEvent;
+
+
+
+/**
+ * @ingroup enum
+ */
+typedef struct XRpad_ShockSensorReport
+{
+    XRpad_ShockEvent largest;
+    XRpad_ShockEvent latest;
+} XRpad_ShockSensorReport;
+
+
+
+/**
+ * @ingroup enum
+ */
+typedef struct XRpad_VersionInfo
+{
+    char subversion[256];
+    char linux_kernel[32];
+    char software[32];
+    char hwdriver[32];
+    char zynq_firmware[32];
+    char spartan_firmware[32];
+    char msp_firmware[32];
+    char pld_firmware[32];
+    char xrpd[32];
+    char wlan[32];
+} XRpad_VersionInfo;
+
+
+
+/** Possible image transfer channels for XRpad
+* @ingroup enum
+*/
+typedef enum XRpad_DataInterfaceControlEnum{
+    XRpad_DATA_VIA_LAN = 0,             // use LAN
+    XRpad_DATA_VIA_WLAN = 1             // use WLAN
+} XRpad_DataInterfaceControlEnum;
+
+
+/**
+* @ingroup enum
+*/
+typedef enum
+{
+	LEVEL_TRACE = 0,
+	LEVEL_DEBUG,
+	LEVEL_INFO,
+	LEVEL_WARN,
+	LEVEL_ERROR,
+	LEVEL_FATAL,
+	LEVEL_ALL,
+	LEVEL_NONE
+} XislLoggingLevels;
+
+/**
+* @ingroup enum
+*/
+typedef void *XislFtpSession;
+
+/**
+* @ingroup enum
+*/
+typedef void *XislFileHandle;
+
+/**
+* @ingroup enum
+*/
+typedef enum XislFileEntryType
+{
+    XFT_File = 1,
+    XFT_Directory = 2,
+    XFT_Link = 4,
+    // ...
+    XFT_Other = 0x80000000,
+    XFT_Any = 0xFFFFFFFF
+} XislFileEntryType;
+
+/**
+* @ingroup enum
+*/
+typedef enum XislFileStorageLocation
+{
+    XFSL_Local = 0,
+    XFSL_FTP = 1
+} XislFileStorageLocation;
+
+typedef struct XislFileInfo
+{
+    const char *filename;
+    const char *directory;
+    const char *address;
+    size_t filesize;
+    XislFileEntryType type;
+    const char *timestamp;
+    // XislFileStorageLocation location;
+} XislFileInfo;
+
+/**
+* @ingroup enum
+*/
+typedef enum ProcScriptOperation
+{
+	PREBINNING,
+	PREMEAN,
+	PRESTOREBUFFER,
+	OFFSET,
+	GAIN,
+	MEAN,
+	PREVIEW,
+	BINNING,
+	STOREBUFFER,
+	STORESD,
+	SEND
+} ProcScriptOperation;
+
+/**
+* @ingroup enum
+*/
+typedef enum OnboardBinningMode
+{
+	ONBOARDBINNING2x1 = 0,
+	ONBOARDBINNING2x2 = 1,
+	ONBOARDBINNING4x1 = 2,
+	ONBOARDBINNING4x4 = 3,
+	ONBOARDBINNING3x3 = 4,
+	ONBOARDBINNING9to4 = 5
+} OnboardBinningMode;
+
+/**
+* @ingroup enum
+*/
+typedef enum XIS_DetectorTriggerMode
+{
+	TRIGGERMODE_DDD,
+	TRIGGERMODE_DDD_WO_CLEARANCE,
+	TRIGGERMODE_STARTSTOP,
+	TRIGGERMODE_FRAMEWISE,
+	TRIGGERMODE_AED,
+	TRIGGERMODE_ROWTAG,
+	TRIGGERMODE_DDD_POST_OFFSET,
+	TRIGGERMODE_DDD_DUAL_POST_OFFSET
+}XIS_DetectorTriggerMode;
+
+/**
+* @ingroup enum
+*/
+typedef enum XIS_Detector_TRIGOUT_SignalMode
+{
+	TRIGOUT_SIGNAL_FRM_EN_PWM,
+	TRIGOUT_SIGNAL_FRM_EN_PWM_INV,
+	TRIGOUT_SIGNAL_EP,
+	TRIGOUT_SIGNAL_EP_INV,
+	TRIGOUT_SIGNAL_DDD_Pulse,
+	TRIGOUT_SIGNAL_DDD_Pulse_INV,
+	TRIGOUT_SIGNAL_GND,
+	TRIGOUT_SIGNAL_VCC
+}XIS_Detector_TRIGOUT_SignalMode;
+
+/**
+* @ingroup enum
+*/
+typedef enum XIS_FileType
+{
+	PKI_RESERVED = 1,
+	PKI_DOUBLE = 2,
+	PKI_SHORT = 4,
+	PKI_SIGNED = 8,
+	PKI_ERRORMAPONBOARD = 16,
+	PKI_LONG = 32,
+	PKI_SIGNEDSHORT = PKI_SHORT | PKI_SIGNED,
+	PKI_SIGNEDLONG = PKI_LONG | PKI_SIGNED,
+	PKI_FAULTMASK = PKI_LONG | PKI_RESERVED
+} XIS_FileType;
+
+/**
+* @ingroup enum
+*/
+typedef enum XIS_Event
+{
+   XE_ACQUISITION_EVENT = 0x00000001,
+   XE_SENSOR_EVENT      = 0x00000002,
+   XE_SDCARD_EVENT      = 0x00000004,
+   XE_BATTERY_EVENT     = 0x00000005,
+   XE_LOCATION_EVENT    = 0x00000006,
+   XE_NETWORK_EVENT     = 0x00000007,
+   XE_DETECTOR_EVENT    = 0x00000008,
+   XE_LIBRARY_EVENT     = 0x00000009,
+   XE_SDCARD_FSCK_EVENT = 0x0000000A,
+} XIS_Event;
+
+/**
+* @ingroup enum
+*/
+typedef enum XIS_Acquisition_Event
+{
+    XAE_TRIGOUT          = 0x00000002,
+    XAE_READOUT          = 0x00000004,
+} XIS_Acquisition_Event;
+
+/**
+* @ingroup enum
+*/
+typedef enum XIS_Sensor_Event
+{
+    XSE_HALL                            = 0x00000001,
+    XSE_SHOCK                           = 0x00000010,
+    XSE_TEMPERATURE                     = 0x00000020,
+    XSE_TEMPERATURE_BACK_TO_NORMAL      = 0x00000021,
+    XSE_THERMAL_SHUTDOWN                = 0x00000022,
+} XIS_Sensor_Event;
+
+/**
+* @ingroup enum
+*/
+typedef enum XIS_Battery_Event
+{
+    XBE_BATTERY_REPORT                  = 0x00000001,
+    XBE_BATTERY_WARNING                 = 0x00000002,
+} XIS_Battery_Event;
+
+/**
+* @ingroup enum
+*/
+typedef enum XIS_Detector_Event
+{
+    XDE_BUFFERS_IN_USE                  = 0x00000001,
+    XDE_STORED_IMAGE                    = 0x00000002,
+    XDE_DROPPED_IMAGE                   = 0x00000003,
+} XIS_Detector_Event;
+
+/**
+* @ingroup enum
+*/
+typedef enum XIS_Library_Event
+{
+	XLE_HIS_ERROR_PACKET_LOSS           = 0x00000001, //!< Frame is lost. not all network packages could be received
+} XIS_Library_Event;
+
+
+
+typedef void (*XIS_EventCallback)(XIS_Event, UINT, UINT, void *, void *);
+
+// wpe library includes
+/* Error codes */
+
+
+
+#ifdef _DLL_EXPORT
+#include "wpe200def.h"
+#else
+#define WPE_ERR_OK                   0  //!< No error
+#define WPE_ILLEGAL_BUFFER      -10000  //!< A buffer supplied is 0, or a buffer length to small
+#define WPE_ERR_JSON_PARSE      -10001  //!< Json parse error
+#define WPE_ERR_JSON_UNPACK     -10002  //!< Json unpack error
+#define WPE_ERR_SERVER_ERROR    -10003  //!< Web server error
+#define WPE_ERR_CURL_ERROR      -10004  //!< Error returned by the curl library
+#define WPE_ERR_NO_NET_ADAPTER  -10005  //!< No network adapters found
+#define WPE_ERR_ILLEGAL_PARAM   -10006  //!< Illegal parameter
+#define WPE_ERR_BASE64_ENCODE   -10007  //!< Error during base64 encoding
+#define WPE_ERR_FORCE_IP        -10008  //!< Error force IP
+#define WPE_ERR_NET_ADAPTER     -10009  //!< Error getting network adapters
+#define WPE_ERR_JSON_CREATE     -10010  //!< Json creation error
+#define WPE_ERR_PROPSTORE       -10011  //!< Error while using the PropertyStore
+
+/**
+ * The device info
+ *
+ */
+struct deviceInfo
+{
+    char device_version[16];             //!< The device version
+    char spec_version[16];               //!< GigE vision spec version
+    char manufacturer_name[32];          //!< The manufactures name
+    char model_name[32];                 //!< The model name
+    char serial_number[16];              //!< The serial number
+    char manufacturer_specific[48];      //!< Some manufacture info
+    char user_name[16];                  //!< Device specific
+};
+
+
+/**
+ * The network information
+ *
+ */
+struct networkInfo
+{
+    char ip[16];        //!< The IP (v4) address as string
+    char mask[16];      //!< The IP mask as string
+    char broadcast[16]; //!< The IP broadcast as string
+    char mac[18];       //!< The MAC address as string    
+};
+
+
+/**
+* Information about a single discovery Reply network packet
+*
+*/
+struct discoveryReplyMsg
+{
+	char remote_ip[16];
+	char local_ip[16];
+};
+
+
+/**
+* The original discovery reply
+*
+*/
+struct discoveryReply
+{
+	struct deviceInfo deviceInfo; //!< The device information
+	struct networkInfo lanInfo;   //!< The LAN network setup
+	struct networkInfo wlanInfo;  //!< The WLAN network setup
+
+	char gvcp_ip[16];             //!< Which IP address is used for image transfer
+};
+
+
+/**
+* The extended discovery reply
+* Can carry additional information
+*/
+struct discoveryReplyEx
+{
+	struct deviceInfo deviceInfo;   //!< The device information
+	struct networkInfo lanInfo;     //!< The LAN network setup
+	struct networkInfo wlanInfo;    //!< The WLAN network setup
+
+	char gvcp_ip[16];               //!< Which IP address is used for image transfer
+
+	struct discoveryReplyMsg messages[32]; //!< Info about the received reply packets
+	unsigned messageCount;          //!< How many messages this reply carries
+};
+
+/**
+* Structure for holding the adapter
+* part of a configuration
+*
+*
+*/
+struct networkAdapterConfiguration
+{
+	int enabled;        //!< Enabled flag, this is not changeable for LAN by API, but changeable for WLAN
+	int hw_accel;       //!< Used image transfer, this is not changeable by API
+	int bridged;        //!< Is the device in a bridge, this is not changeable by API
+
+	char ifname[16];    //!< Interface name (eth0), this is not changeable by API
+	char ipaddr[16];    //!< IP address
+	char netmask[16];   //!< Netmask
+	char proto[16];     //!< "static" or "dhcp", only these two options are available
+	char dns[16];       //!< DNS server
+	char gateway[16];   //!< Gateway
+	char macaddr[18];   //!< MAC address, this is not changeable by API
+
+	char not_used[110]; //!< To fill up the struct to 320 byte
+};
+
+
+/**
+* Wifi configurations
+*/
+struct wifiConfiguration
+{
+	char mode[32];      //!< Accesspoint or client
+	char agmode[32];    //!< agmode
+	int channel;        //!< Channel
+
+	char ssid[64];          //!< Own SSID if mode == "ap" or the accesspoints ssid
+	char description[64];   //!< Contains the description in case of a station
+};
+
+
+/**
+* Wifi configurations, extended version
+*/
+struct wifiConfigurationEx
+{
+	char mode[32];      //!< Accesspoint or client
+	char agmode[32];    //!< agmode
+	int channel;        //!< Channel, only valid options will be accepted, otherwise will return with error
+
+	char ssid[64];          //!< Own SSID if mode == "ap" or the accesspoints ssid
+	char description[64];   //!< Contains the description in case of a station
+
+	char passphrase[68];    //!< new Passphrase (station or accesspoint) (may be 64 byte)
+	int scan_ssid;          //!< only of station mode: scan the SSID
+};
+
+
+
+
+/**
+* Structure for holding the complete
+* network configuration.
+*
+*/
+struct networkConfiguration
+{
+	char path[128];         //!< The configurations path, this is not changeable by API
+	char name[80];          //!< The configuration name
+	char hostname[80];      //!< The hostname
+	int readonly;           //!< Is the configuration readonly, this is not changeable by API
+	int sshd_enabled;       //!< SSH daemon enabled
+
+	int gbif_enabled;       //!< Is the GBif enabled
+
+	struct networkAdapterConfiguration lan;     //!< LAN
+	struct networkAdapterConfiguration wlan;    //!< WLAN
+
+	struct wifiConfigurationEx wifi; //!< Wifi configuration, extended version
+
+	char notUsed[184];               //!< For later extensions
+};
+#endif // _DLL_EXPORT
+// wpe library includes end
+
 HIS_RETURN Acquisition_Init(HACQDESC *phAcqDesc,
 					  DWORD dwChannelType, int nChannelNr,
 					  BOOL bEnableIRQ, 
@@ -330,13 +928,13 @@ HIS_RETURN Acquisition_GetConfiguration(HACQDESC hAcqDesc,
 HIS_RETURN Acquisition_GetIntTimes(HACQDESC hAcqDesc, double *dblIntTime, int *nIntTimes);
 HIS_RETURN Acquisition_GetWinHandle(HACQDESC hAcqDesc, HWND *hWnd);
 HIS_RETURN Acquisition_GetActFrame(HACQDESC hAcqDesc, DWORD *dwActAcqFrame, DWORD *dwActSecBuffFrame);
-#ifdef __X64
+#ifdef XIS_OS_64
 HIS_RETURN Acquisition_SetAcqData(HACQDESC hAcqDesc, void *AcqData);
 HIS_RETURN Acquisition_GetAcqData(HACQDESC hAcqDesc, void **VoidAcqData);
 #else
 HIS_RETURN Acquisition_SetAcqData(HACQDESC hAcqDesc, DWORD dwAcqData);
 HIS_RETURN Acquisition_GetAcqData(HACQDESC hAcqDesc, DWORD *dwAcqData);
-#endif // __X64
+#endif // XIS_OS_64
 HIS_RETURN Acquisition_GetHwHeaderInfo(HACQDESC hAcqDesc, CHwHeaderInfo *pInfo);
 HIS_RETURN Acquisition_SetFrameSync(HACQDESC hAcqDesc);
 HIS_RETURN Acquisition_SetFrameSyncMode(HACQDESC hAcqDesc, DWORD dwMode);
@@ -423,6 +1021,46 @@ HIS_RETURN Acquisition_GbIF_CheckNetworkSpeed(	HACQDESC hAcqDesc, WORD* wTiming,
 HIS_RETURN Acquisition_GbIF_GetDetectorProperties(HACQDESC hAcqDesc, GBIF_Detector_Properties* pDetectorProperties);
 HIS_RETURN Acquisition_GbIF_GetDeviceParams(HACQDESC hAcqDesc, GBIF_DEVICE_PARAM* pDevice);
 
+HIS_RETURN Acquisition_GbIF_GetVersion(int *pMajor, int* pMinor, int *pRelease, char *pStrVersion, int iStrLength);
+HIS_RETURN Acquisition_GbIF_DiscoverDetectors();
+HIS_RETURN Acquisition_GbIF_DiscoveredDetectorCount(long *pDeviceCount);
+HIS_RETURN Acquisition_GbIF_DiscoveredDetectorByIndex(long lIndex, GBIF_DEVICE_PARAM *pDevice);
+HIS_RETURN Acquisition_GbIF_SetDiscoveryTimeout(long timeout);
+
+HIS_RETURN Acquisition_wpe_GetVersionNEW(int * major, int * minor, int * release, int * build);
+HIS_RETURN Acq_WPE_Init();
+
+HIS_RETURN Acquisition_wpe_ForceIP(const char* macAddress, struct networkConfiguration* config, int port, int *isAnswered);
+HIS_RETURN Acquisition_wpe_ChangeNetworkConfig(const char * ipAddress, int configIndex, struct networkConfiguration *config);
+HIS_RETURN Acquisition_wpe_FillDefaultNetworkConfiguration(struct networkConfiguration *config);
+
+// FTP specific
+HIS_RETURN Acquisition_FTP_InitSession(HACQDESC hAcqDesc, XislFtpSession *session);
+HIS_RETURN Acquisition_FTP_CloseSession(XislFtpSession session);
+HIS_RETURN Acquisition_GetMissedImageCount(XislFtpSession session, UINT *count);
+HIS_RETURN Acquisition_OpenMissedImage(XislFtpSession session, UINT index, XislFileHandle *fileHandle);
+
+// Common (multi-purpose) file handling
+HIS_RETURN Acquisition_GetFileInfo(XislFileHandle fileHandle, XislFileInfo *fileInfo);
+HIS_RETURN Acquisition_LoadFile(XislFileHandle fileHandle, unsigned char **buffer);
+HIS_RETURN Acquisition_DeleteFile(XislFileHandle fileHandle);
+HIS_RETURN Acquisition_CloseFile(XislFileHandle fileHandle);
+
+HIS_RETURN Acq_wpe_LoadCorrectionImageToBuffer(HACQDESC hAcqDesc, const char* pccCorrectionFilePath, ProcScriptOperation Operation);
+
+HIS_RETURN Acquisition_AcknowledgeImage(HACQDESC hAcqDesc, const char *tag);
+
+HIS_RETURN Acquisition_wpe_SetUniqueImageTag(HACQDESC hAcqDesc, const char * imageTag);
+
+HIS_RETURN Acquisition_Reset_OnboardOptions(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_Set_OnboardOptionsPostOffset(HACQDESC hAcqDesc, BOOL bNoOnboardCorr, BOOL bSendPreviewFrist, BOOL bSendFULLFirst, BOOL bEnableAckFirst, BOOL bEnableAckSecond, BOOL bEnableOffsetFirst, BOOL bEnablePostOffsetCorr, BOOL bGain, BOOL bPixel);
+HIS_RETURN Acquisition_Set_OnboardOptionsPostOffsetEx(HACQDESC hAcqDesc, BOOL bNoOnboardCorr, BOOL bSendPreviewFrist, BOOL bSendFULLFirst, BOOL bEnableAckFirst, BOOL bEnableAckSecond, BOOL bEnableOffsetFirst, BOOL bEnablePostOffsetCorr, BOOL bGain, BOOL bPixel, BOOL bStoreOffsetToSD);
+
+HIS_RETURN Acquisition_wpe_SetMaxOnboardCorrValue(HACQDESC hAcqDesc, unsigned short usMax, unsigned short usReplace);
+
+HIS_RETURN Acquisition_Set_OnboardOffsetImageAcquisition(HACQDESC hAcqDesc, BOOL bEnable, BOOL bSend, BOOL bStoreSD);
+HIS_RETURN Acquisition_Set_OnboardOptions(HACQDESC hAcqDesc, BOOL bStoreSD, BOOL bOffset, BOOL bGain, BOOL bPixel);
+
 HIS_RETURN Acquisition_ActivateServiceMode(HACQDESC hAcqDesc, BOOL bActivate);
 
 HIS_RETURN Acquisition_SetCameraROI(HACQDESC hAcqDesc, unsigned short usActivateGrp); // val 2010-05-12
@@ -456,10 +1094,92 @@ HIS_RETURN Acquisition_SetCameraFOVMode(HACQDESC hAcqDesc, WORD wMode); // 2013-
 HIS_RETURN Acquisition_GetCameraFOVMode(HACQDESC hAcqDesc, WORD* wMode); // 2013-07-03 val R&F Field Of View 
 
 HIS_RETURN Acquisition_wpe_ReadCameraRegisters(const char * ipAddress, unsigned long * buffer);
+HIS_RETURN Acquisition_wpe_GetExamFlag(const char * ipAddress, unsigned long *pExamFlag);
+HIS_RETURN Acq_wpe_SystemControl(const char * ipAddress, XRpad_SystemControlEnum eAction);
+HIS_RETURN Acq_wpe_SetImageTransferInterface(const char *ipAddress, XRpad_DataInterfaceControlEnum eInterface);
+HIS_RETURN Acq_wpe_GetSystemInformation(const char * ipAddress, char *buffer, int bufferLen);
 
-HIS_RETURN Acquisition_GetFTPFile(const char * ipAddress, char * filename, void ** databuffer, long * filesize); //2013-07-17 mk
+HIS_RETURN Acquisition_GetFTPFile(const char * ipAddress, const char * filename, void ** databuffer, long * filesize); //2013-07-17 mk
 HIS_RETURN Acquisition_FreeFTPFileBuffer(void * databuffer); //2013-09-19 mv
-HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, char * filename, void * databuffer, long filesize); //2013-07-17 mk
+HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, const char * filename, void * databuffer, long filesize); //2013-07-17 mk
+
+HIS_RETURN Acquisition_GetVersion(int * major, int * minor, int * release, int * build);
+
+HIS_RETURN Acquisition_GetProvidedEnhancedFeatures(HACQDESC hAcqDesc, unsigned int* uiEnhancesFeatures);
+HIS_RETURN Acquisition_Set_OnboardOptionPreview(HACQDESC hAcqDesc, BOOL bEnablePreview, BOOL bPreviewOptionSendFull, OnboardBinningMode eMode, unsigned int uiSelectedScript);
+HIS_RETURN Acquisition_IsPreviewImage(HACQDESC hAcqDesc, unsigned int* uiIsPreview);
+HIS_RETURN Acquisition_SetPhototimedParams(HACQDESC hAcqDesc, unsigned short usNrOfScrubs, unsigned short usMaxDelay);
+
+HIS_RETURN Acquisition_EnableLogging(BOOL onOff);
+HIS_RETURN Acquisition_SetLogLevel(XislLoggingLevels xislLogLvl);
+HIS_RETURN Acquisition_GetLogLevel(XislLoggingLevels *xislLogLvl);
+HIS_RETURN Acquisition_TogglePerformanceLogging(BOOL onOff);
+HIS_RETURN Acquisition_SetLogOutput(const char* filePath, BOOL consoleOnOff);
+HIS_RETURN Acquisition_SetFileLogging(const char* filename, BOOL enableLogging);
+HIS_RETURN Acquisition_SetConsoleLogging(BOOL enableConsole);
+
+HIS_RETURN Acquisition_GetXISFileBufferSize(size_t* pFileSize, UINT dwRows, UINT dwColumns, UINT dwFrames, BOOL uiOnboardFileHeader,XIS_FileType filetype);
+HIS_RETURN Acquisition_CreateOnboardPixelMaskFrom16BitPixelMask(unsigned short* uspPixelMaskSrc, DWORD dwRows, DWORD dwColumns, unsigned char* bpOnboardPixelMask);
+HIS_RETURN Acquisition_CreateXISFileInMemory(void* pMemoryFileBuffer, void*pDataBuffer, UINT dwRows, UINT dwColumns, UINT dwFrames, BOOL uiOnboardFileHeader, XIS_FileType filetype);
+HIS_RETURN Acquisition_SaveFile(const char *filename, void* pImageBuffer, UINT dwRows, UINT dwColumns, UINT dwFrames , BOOL uiOnboardFileHeader, XIS_FileType usTypeOfNumbers);
+HIS_RETURN Acquisition_SaveRawData(const char *filename, const unsigned char *buffer, size_t bufferSize);
+HIS_RETURN Acquisition_LoadXISFileToMemory(const char *filename, void* pMemoryFileBuffer, size_t bufferSize);
+
+HIS_RETURN Acquisition_SetDACOffsetFloorValueByMode(HACQDESC hAcqDesc, unsigned int uiMode);
+HIS_RETURN Acquisition_SetDACOffsetFloorValueInFlash(HACQDESC hAcqDesc, unsigned int uiMode, WORD wValue);
+HIS_RETURN Acquisition_GetDACOffsetFloorValueFromFlash(HACQDESC hAcqDesc, unsigned int uiMode, WORD* pwValue);
+HIS_RETURN Acquisition_GetDetectorProperties(HACQDESC hAcqDesc, GBIF_Detector_Properties* pDetectorProperties);
+HIS_RETURN Acquisition_SetDACoffset(HACQDESC hAcqDesc, WORD wDACoffsetValue);
+HIS_RETURN Acquisition_SetDACoffsetBinningFPS(HACQDESC hAcqDesc, WORD wBinningMode, double dblFps, WORD *pwValueToFPGA);
+HIS_RETURN Acquisition_Enable_EMI_Data_Readout(HACQDESC hAcqDesc, unsigned int uiOnOff);
+HIS_RETURN Acquisition_GetGridSensorStatus(HACQDESC hAcqDesc, unsigned int *uiStatus);
+HIS_RETURN Acquisition_GetConnectionStatus(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_Set_FPGA_Power_Mode(HACQDESC hAcqDesc, unsigned int uiMode);
+HIS_RETURN Acquisition_SetTailTimeforTriggerMode(HACQDESC hAcqDesc, unsigned short usTailTime, XIS_DetectorTriggerMode eTriggerMode);
+
+HIS_RETURN Acquisition_SetEventCallback(HACQDESC hAcqDesc, XIS_EventCallback EventCallback, void *userData);
+HIS_RETURN Acquisition_DisableEventCallback(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_ResetOnboardShockEvent(HACQDESC hAcqDesc, unsigned int latestShock_Timestamp);
+
+HIS_RETURN Acquisition_SetSDCardForceFsck(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_AckSDCardForceFsck(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_AckSDCardForceFsckError(HACQDESC hAcqDesc);
+
+HIS_RETURN Acquisition_GetSDCardInfo(HACQDESC hAcqDesc, unsigned int *total, unsigned int *avail);
+HIS_RETURN Acquisition_SetFakeTemperature(HACQDESC hAcqDesc, BOOL bEnableFakeMode, int iFakeTemperature);
+HIS_RETURN Acquisition_IdentifyDevice(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_Resend_All_Messages(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_GetLocation(HACQDESC hAcqDesc, unsigned int *location);
+HIS_RETURN Acquisition_GetNetwork(HACQDESC hAcqDesc, unsigned int *network);
+HIS_RETURN Acquisition_SetNetworkSpeed(HACQDESC hAcqDesc, unsigned int network);
+HIS_RETURN Acquisition_SetIdleTimeout(HACQDESC hAcqDesc, unsigned short timeout);
+HIS_RETURN Acquisition_SetChargeMode(HACQDESC hAcqDesc, unsigned char charge_mode);
+HIS_RETURN Acquisition_VerifyGenuineness(HACQDESC hAcqDesc, char (*msg)[128], size_t *msg_len, unsigned char (*md)[20]);
+HIS_RETURN Acquisition_SetPrivateKey(HACQDESC hAcqDesc, unsigned char (*key_old)[64], unsigned char (*key_new)[64]);
+HIS_RETURN Acquisition_SetTemperatureTimeout(HACQDESC hAcqDesc, unsigned short timeout);
+HIS_RETURN Acquisition_ResetTemperatureTimeout(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_SetTemperatureThresholds(HACQDESC hAcqDesc, unsigned int threshold_warning, unsigned int threshold_critical);
+HIS_RETURN Acquisition_GetTemperatureThresholds(HACQDESC hAcqDesc, unsigned int *threshold_warning, unsigned int *threshold_critical);
+HIS_RETURN Acquisition_GetBatteryStatus(HACQDESC hAcqDesc, XRpad_BatteryStatus *batteryStatus);
+HIS_RETURN Acquisition_Get_Current_Voltage(HACQDESC hAcqDesc, DETECTOR_CURRENT_VOLTAGE *pstructCurrentVoltage);
+HIS_RETURN Acquisition_CreateFakeShockWarningLevel(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_CreateFakeShockCriticalLevel(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_FactoryResetShock(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_SetSystemTime(HACQDESC hAcqDesc, char* cDateTime);
+HIS_RETURN Acquisition_GetPowerstate(HACQDESC hAcqDesc, unsigned int *powerstate);
+HIS_RETURN Acquisition_GetAutoPowerOnLocations(HACQDESC hAcqDesc, unsigned int *autopoweronlocations);
+HIS_RETURN Acquisition_SetAutoPowerOnLocations(HACQDESC hAcqDesc, unsigned int autopoweronlocations);
+HIS_RETURN Acquisition_GetChargeMode(HACQDESC hAcqDesc, unsigned char* charge_mode_req, unsigned char* charge_mode_charger);
+HIS_RETURN Acquisition_SetSDCardTimeout(HACQDESC hAcqDesc, unsigned short sdcard_timeout);
+HIS_RETURN Acquisition_GetSDCardTimeout(HACQDESC hAcqDesc, unsigned short *sdcard_timeout);
+HIS_RETURN Acquisition_GetVersionInfo(HACQDESC hAcqDesc, XRpad_VersionInfo *versionInfo);
+HIS_RETURN Acquisition_GetIpAdress(HACQDESC hAcqDesc, const char **ipAddress);
+HIS_RETURN Acquisition_Test_SDCardPerformance(HACQDESC hAcqDesc, unsigned int buffersize,
+                                              double *wbitrate, unsigned int *wmicroseconds,
+                                              double *rbitrate, unsigned int *rmicroseconds);
+
+
+
 
 #ifdef __cplusplus
 }
@@ -467,68 +1187,265 @@ HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, char * filename, void 
 
 //error codes
 
-#define HIS_ALL_OK							0
-#define HIS_ERROR_MEMORY					1
-#define HIS_ERROR_BOARDINIT					2
-#define HIS_ERROR_NOCAMERA					3
-#define HIS_ERROR_CORRBUFFER_INCOMPATIBLE	4
-#define HIS_ERROR_ACQ_ALREADY_RUNNING		5
-#define HIS_ERROR_TIMEOUT					6
-#define HIS_ERROR_INVALIDACQDESC			7
-#define HIS_ERROR_VXDNOTFOUND				8
-#define HIS_ERROR_VXDNOTOPEN				9
-#define HIS_ERROR_VXDUNKNOWNERROR			10
-#define HIS_ERROR_VXDGETDMAADR				11
-#define HIS_ERROR_ACQABORT					12
-#define HIS_ERROR_ACQUISITION				13
-#define HIS_ERROR_VXD_REGISTER_IRQ			14
-#define HIS_ERROR_VXD_REGISTER_STATADR		15
-#define HIS_ERROR_GETOSVERSION				16
-#define HIS_ERROR_SETFRMSYNC				17
-#define HIS_ERROR_SETFRMSYNCMODE			18
-#define HIS_ERROR_SETTIMERSYNC				19
-#define HIS_ERROR_INVALID_FUNC_CALL			20
-#define HIS_ERROR_ABORTCURRFRAME			21
-#define HIS_ERROR_GETHWHEADERINFO			22
-#define HIS_ERROR_HWHEADER_INV				23
-#define HIS_ERROR_SETLINETRIG_MODE			24
-#define HIS_ERROR_WRITE_DATA				25
-#define HIS_ERROR_READ_DATA					26
-#define HIS_ERROR_SETBAUDRATE				27
-#define HIS_ERROR_NODESC_AVAILABLE			28
-#define HIS_ERROR_BUFFERSPACE_NOT_SUFF		29
-#define HIS_ERROR_SETCAMERAMODE				30
-#define HIS_ERROR_FRAME_INV					31
-#define HIS_ERROR_SLOW_SYSTEM				32
-#define HIS_ERROR_GET_NUM_BOARDS			33
-#define HIS_ERROR_HW_ALREADY_OPEN_BY_ANOTHER_PROCESS	34
-#define HIS_ERROR_CREATE_MEMORYMAPPING				35
-#define HIS_ERROR_VXD_REGISTER_DMA_ADDRESS			36
-#define HIS_ERROR_VXD_REGISTER_STAT_ADDR			37
-#define HIS_ERROR_VXD_UNMASK_IRQ					38
-#define HIS_ERROR_LOADDRIVER						39
-#define HIS_ERROR_FUNC_NOTIMPL						40
-#define HIS_ERROR_MEMORY_MAPPING					41
-#define HIS_ERROR_CREATE_MUTEX						42
-#define HIS_ERROR_ACQ								43
-#define HIS_ERROR_DESC_NOT_LOCAL					44
-#define HIS_ERROR_INVALID_PARAM						45
-#define HIS_ERROR_ABORT								46
-#define HIS_ERROR_WRONGBOARDSELECT					47
-#define HIS_ERROR_WRONG_CAMERA_MODE					48	 
-#define HIS_ERROR_AVERAGED_LOST						49	 
-#define HIS_ERROR_BAD_SORTING_PARAM					50	
-#define HIS_ERROR_UNKNOWN_IP_MAC_NAME				51	
-#define HIS_ERROR_NO_BOARD_IN_SUBNET				52
-#define HIS_ERROR_UNABLE_TO_OPEN_BOARD				53
-#define HIS_ERROR_UNABLE_TO_CLOSE_BOARD				54
-#define HIS_ERROR_UNABLE_TO_ACCESS_DETECTOR_FLASH	55
-#define HIS_ERROR_HEADER_TIMEOUT					56
-#define HIS_ERROR_NO_PING_ACK						57
-#define HIS_ERROR_NR_OF_BOARDS_CHANGED				58
-#define HIS_ERROR_SETEXAMFLAG						59 
 
- 
+/** No error @ingroup enum **/
+#define HIS_ALL_OK							0
+/** Memory couldn't be allocated. @ingroup enum **/
+#define HIS_ERROR_MEMORY					1
+/** Unable to initialize board. @ingroup enum **/
+#define HIS_ERROR_BOARDINIT					2
+/** Got a time out. May be no detector present. @ingroup enum **/
+#define HIS_ERROR_NOCAMERA					3
+/** Your correction files do not have a proper size. @ingroup enum **/
+#define HIS_ERROR_CORRBUFFER_INCOMPATIBLE	4
+/** Acquisition is already running. @ingroup enum **/
+#define HIS_ERROR_ACQ_ALREADY_RUNNING		5
+/** Got a time out from hardware. @ingroup enum **/
+#define HIS_ERROR_TIMEOUT					6
+/** Acquisition descriptor invalid. @ingroup enum **/
+#define HIS_ERROR_INVALIDACQDESC			7
+/** Unable to find VxD. @ingroup enum **/
+#define HIS_ERROR_VXDNOTFOUND				8
+/** Unable to open VxD. @ingroup enum **/
+#define HIS_ERROR_VXDNOTOPEN				9
+/** Unknown error during VxD loading. @ingroup enum **/
+#define HIS_ERROR_VXDUNKNOWNERROR			10
+/** VxD Error: GetDmaAddr failed. @ingroup enum **/
+#define HIS_ERROR_VXDGETDMAADR				11
+/** An unexpected acquisition abort occurred. @ingroup enum **/
+#define HIS_ERROR_ACQABORT					12
+/** error occurred during data acquisition. @ingroup enum **/
+#define HIS_ERROR_ACQUISITION				13
+/** Unable to register interrupt. @ingroup enum **/
+#define HIS_ERROR_VXD_REGISTER_IRQ			14
+/** Register status address failed. @ingroup enum **/
+#define HIS_ERROR_VXD_REGISTER_STATADR		15
+/** Getting version of operating system failed. @ingroup enum **/
+#define HIS_ERROR_GETOSVERSION				16
+/** Can not set frame sync. @ingroup enum **/
+#define HIS_ERROR_SETFRMSYNC				17
+/** Can not set frame sync mode. @ingroup enum **/
+#define HIS_ERROR_SETFRMSYNCMODE			18
+/** Can not set timer sync. @ingroup enum **/
+#define HIS_ERROR_SETTIMERSYNC				19
+/** Invalid function call. @ingroup enum **/
+#define HIS_ERROR_INVALID_FUNC_CALL			20
+/** Aborting current frame failed. @ingroup enum **/
+#define HIS_ERROR_ABORTCURRFRAME			21
+/** Getting hardware header failed. @ingroup enum **/
+#define HIS_ERROR_GETHWHEADERINFO			22
+/** Hardware header is invalid. @ingroup enum **/
+#define HIS_ERROR_HWHEADER_INV				23
+/** Setting line trigger mode failed. @ingroup enum **/
+#define HIS_ERROR_SETLINETRIG_MODE			24
+/** Writing data failed. @ingroup enum **/
+#define HIS_ERROR_WRITE_DATA				25
+/** Reading data failed. @ingroup enum **/
+#define HIS_ERROR_READ_DATA					26
+/** Setting baud rate failed. @ingroup enum **/
+#define HIS_ERROR_SETBAUDRATE				27
+/** No acquisition descriptor available. @ingroup enum **/
+#define HIS_ERROR_NODESC_AVAILABLE			28
+/** Buffer space not sufficient. @ingroup enum **/
+#define HIS_ERROR_BUFFERSPACE_NOT_SUFF		29
+/** Setting detector mode failed. @ingroup enum **/
+#define HIS_ERROR_SETCAMERAMODE				30
+/** Frame invalid. @ingroup enum **/
+#define HIS_ERROR_FRAME_INV					31
+/** System to slow. @ingroup enum **/
+#define HIS_ERROR_SLOW_SYSTEM				32
+/** Error during getting number of boards. @ingroup enum **/
+#define HIS_ERROR_GET_NUM_BOARDS			33
+/** Communication channel already opened by another process. @ingroup enum **/
+#define HIS_ERROR_HW_ALREADY_OPEN_BY_ANOTHER_PROCESS	34
+/** Error creating memory mapped file. @ingroup enum **/
+#define HIS_ERROR_CREATE_MEMORYMAPPING				35
+/** Error registering DMA address. @ingroup enum **/
+#define HIS_ERROR_VXD_REGISTER_DMA_ADDRESS			36
+/** Error registering static address. @ingroup enum **/
+#define HIS_ERROR_VXD_REGISTER_STAT_ADDR			37
+/** Unable to unmask interrupt. @ingroup enum **/
+#define HIS_ERROR_VXD_UNMASK_IRQ					38
+/** Unable to load driver. @ingroup enum **/
+#define HIS_ERROR_LOADDRIVER						39
+/** Function is not implemented. @ingroup enum **/
+#define HIS_ERROR_FUNC_NOTIMPL						40
+/** Unable to create memory mapping. @ingroup enum **/
+#define HIS_ERROR_MEMORY_MAPPING					41
+/** Could not create Mutex. @ingroup enum **/
+#define HIS_ERROR_CREATE_MUTEX						42
+/** Error starting the acquisition. @ingroup enum **/
+#define HIS_ERROR_ACQ								43
+/** Acquisition descriptor is not local. @ingroup enum **/
+#define HIS_ERROR_DESC_NOT_LOCAL					44
+/** Invalid Parameter. @ingroup enum **/
+#define HIS_ERROR_INVALID_PARAM						45
+/** Error during abort acquisition function. @ingroup enum **/
+#define HIS_ERROR_ABORT								46
+/** The wrong board is selected. @ingroup enum **/
+#define HIS_ERROR_WRONGBOARDSELECT					47
+/** Change of Detector Mode during Acquisition. @ingroup enum **/
+#define HIS_ERROR_WRONG_CAMERA_MODE					48	 
+/** The number of images for frame grabber onboard averaging must be 2 to the power of n. @ingroup enum **/
+#define HIS_ERROR_AVERAGED_LOST						49	 
+/** Parameter for (onboard) sorting not valid. @ingroup enum **/
+#define HIS_ERROR_BAD_SORTING_PARAM					50	
+/** Connection to Network Detector cannot be opened due to invalid IP address / MAC / Detector name. @ingroup enum **/
+#define HIS_ERROR_UNKNOWN_IP_MAC_NAME				51	
+/** Detector could not be found in the Subnet. @ingroup enum **/
+#define HIS_ERROR_NO_BOARD_IN_SUBNET				52
+/** Unable to open connection to Network Detector. @ingroup enum **/
+#define HIS_ERROR_UNABLE_TO_OPEN_BOARD				53
+/** Unable to close connection to Network Detector. @ingroup enum **/
+#define HIS_ERROR_UNABLE_TO_CLOSE_BOARD				54
+/** Unable to access the flash memory of Detector. @ingroup enum **/
+#define HIS_ERROR_UNABLE_TO_ACCESS_DETECTOR_FLASH	55
+/** No frame header received from Detector. @ingroup enum **/
+#define HIS_ERROR_HEADER_TIMEOUT					56
+/** Command not acknowledged. @ingroup enum **/
+#define HIS_ERROR_NO_FPGA_ACK						57
+/** Number of boards within network changed during broadcast. @ingroup enum **/
+#define HIS_ERROR_NR_OF_BOARDS_CHANGED				58
+/** Unable to set the exam flag. @ingroup enum **/
+#define HIS_ERROR_SETEXAMFLAG						59
+/** Error Function called with an illegal index number. @ingroup enum **/
+#define HIS_ERROR_ILLEGAL_INDEX                     60
+/** Error Function or function environment not correctly initialised. @ingroup enum **/
+#define HIS_ERROR_NOT_INITIALIZED                   61
+/** Error No detectors discovered yet. @ingroup enum **/
+#define HIS_ERROR_NOT_DISCOVERED                    62
+/** Error onbaord averaging failed. @ingroup enum **/
+#define HIS_ERROR_ONBOARDAVGFAILED                  63
+/** Error getting onboard offset. @ingroup enum **/
+#define HIS_ERROR_GET_ONBOARD_OFFSET				64
+/** Error CURL. @ingroup enum **/
+#define HIS_ERROR_CURL                              65
+/** Error setting onboard offset corr mode. @ingroup enum **/
+#define HIS_ERROR_ENABLE_ONBOARD_OFFSET				66
+/** Error setting onboard mean corr mode. @ingroup enum **/
+#define HIS_ERROR_ENABLE_ONBOARD_MEAN				67
+/** Error setting onboard gain corr mode. @ingroup enum **/
+#define HIS_ERROR_ENABLE_ONBOARD_GAINOFFSET			68
+/** Error setting onboard preview mode. @ingroup enum **/
+#define HIS_ERROR_ENABLE_ONBOARD_PREVIEW			69
+/** Error setting onboard binning mode. @ingroup enum **/
+#define HIS_ERROR_SET_ONBOARD_BINNING				70
+/** Error Loading image from SD to onboard buffer. @ingroup enum **/
+#define HIS_ERROR_LOAD_COORECTIONIMAGETOBUFFER		71
+/** Error Invalid pointer/buffer passed as parameter. @ingroup enum **/
+#define HIS_ERROR_INVALIDBUFFERNR					72
+/** Error Invalid SHOCKID. @ingroup enum **/
+#define HIS_ERROR_INVALID_HANDLE                    73
+/** Error Invalid filename, file already exists. @ingroup enum **/
+#define HIS_ERROR_ALREADY_EXISTS                    74
+/** Error Invalid filename type does not exist. @ingroup enum **/
+#define HIS_ERROR_DOES_NOT_EXIST                    75
+/** Error Invalid filename for image tag or log file. @ingroup enum **/
+#define HIS_ERROR_OPEN_FILE                         76
+/** Error Invalid filename for image tag or log file. @ingroup enum **/
+#define HIS_ERROR_INVALID_FILENAME                  77
+/** Error setting gbif discovery timeout. @ingroup enum **/
+#define HIS_ERROR_SETDISCOVERYTIMEOUT               78
+// DEXELA
+#define HIS_ERROR_SERIALREAD						100
+// DEXELA
+#define HIS_ERROR_SERIALWRITE						101
+// 1313
+#define HIS_ERROR_SETDAC							102
+// 1313
+#define HIS_ERROR_SETADC							103
+/** Error setting the onboard image tag. @ingroup enum **/
+#define HIS_ERROR_SET_IMAGE_TAG						104
+/** Error setting the onboard process script. @ingroup enum **/
+#define HIS_ERROR_SET_PROC_SCRIPT					105
+/** Error Image tag length exceeded 128char (including path: autosave/). @ingroup enum **/
+#define HIS_ERROR_SET_IMAGE_TAG_LENGTH				106
+/** Error retrieving the enhanced header. @ingroup enum **/
+#define HIS_ERROR_RETRIEVE_ENHANCED_HEADER			107
+/** Error enabling XRPD interrupts. @ingroup enum **/
+#define HIS_ERROR_ENABLE_INTERRUPTS                 108
+/** Error XRPD session Error. @ingroup enum **/
+#define HIS_ERROR_XRPD_SESSION_ERROR                109
+/** Error No interface to communicate event messages active. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_EVENT                    110
+/** Error No interface to communicate event messages active. @ingroup enum **/
+#define HIS_ERROR_XRPD_NO_EVENT_INTERFACE           111
+/** Error creating fake shock events. @ingroup enum **/
+#define HIS_ERROR_XRPD_CREATE_FAKE_SHOCK_EVENT      112
+/** Error retrieving the sd card info. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_SDCARD_INFO              113
+/** Error activating the fake temperatur mode on the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_TEMP_FAKE_MODE           114
+/** Error the requested EMI readout mode was not reported by the detector. @ingroup enum **/
+#define HIS_ERROR_EMI_NOT_SET                       115
+/** Error retrieving the location info from the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_NO_LOCATION                  116
+/** Error setting the on detector idle timeout. @ingroup enum **/
+#define HIS_ERROR_SET_IDLE_TIMEOUT                  117
+/** Error setting the software requested charge mode. @ingroup enum **/
+#define HIS_ERROR_SET_CHARGE_MODE                   118
+/** Error creating critical level fake shock events. @ingroup enum **/
+#define HIS_ERROR_XRPD_CREATE_FAKE_SHOCK_EVENT_CRIT 119
+/** Error creating warning level fake shock events. @ingroup enum **/
+#define HIS_ERROR_XRPD_CREATE_FAKE_SHOCK_EVENT_WARN 120
+/** Error resetting the shock events to factory values. @ingroup enum **/
+#define HIS_ERROR_XRPD_FACTORY_RESET_SHOCK_EVENT    121
+/** Error getting the on detector LAN network speed. @ingroup enum **/
+#define HIS_ERROR_XRPD_NO_NETWORK                   122
+/** Error setting the on detector LAN network speed. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_NETWORK                  123
+/** Error verifying the private key for genuiness. @ingroup enum **/
+#define HIS_ERROR_XRPD_VERIFY_GENUINENESS           124
+/** Error setting the private key for genuiness. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_PRIVATE_KEY              125
+/** Error setting the temperature timeout. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_TEMPERATURE_TIMEOUT      126
+/** Error resetting the temperature timeout counter. @ingroup enum **/
+#define HIS_ERROR_XRPD_RESET_TEMPERATURE_TIMEOUT    127
+/** Error setting the temperature thresholds on the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_TEMPERATURE_THRESHOLDS   128
+/** Error getting the temperature thresholds from the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_TEMPERATURE_THRESHOLDS   129
+/** Error no eventcallback defined for irq messages. @ingroup enum **/
+#define HIS_ERROR_XRPD_NO_EVENTCALLBACK_DEFINED     130
+/** Error setting on detectors date and time. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_DATE_TIME                131
+/** Error triggering the resend of all current messages by the XRPD. @ingroup enum **/
+#define HIS_ERROR_XRPD_RESEND_ALL_MSG               132
+/** Error acknowledging the image. @ingroup enum **/
+#define HIS_ERROR_ACKNOWLEDGE_IMAGE                 133
+/** Error connecting to the on detector XRPD process. @ingroup enum **/
+#define HIS_ERROR_XRPD_CONNECT                      134
+/** Error resetting the shock event. @ingroup enum **/
+#define HIS_ERROR_XRPD_RESET_SHOCK                  135
+/** Error setting the power state on the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_REQUEST_POWERSTATE           136
+/** Error retrieving the auto power on locations from the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_AUTOPOWERONLOCATIONS     137
+/** Error setting the auto power on locations on the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_AUTOPOWERONLOCATIONS     138
+/** Error retrieving the requested charge mode from the detector. @ingroup enum **/
+#define HIS_ERROR_GET_CHARGE_MODE                   139
+/** Error requesting an fscheck on next boot. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_FORCE_FSCK               140
+/** Error setting the sd card timeout on the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_SDCARD_TIMEOUT           141
+/** Error getting the sd card timeout from the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_SDCARD_TIMEOUT           142
+/** Error not connected to on detector XRPD process. @ingroup enum **/
+#define HIS_ERROR_MISSING_VERSION_INFORMATION       143
+/** Error not connected to on detector XRPD process. @ingroup enum **/
+#define HIS_ERROR_XRPD_NOT_CONNECTED                144
+/** Error retrieving the SD card performance. @ingroup enum **/
+#define HIS_ERROR_XRPD_SDCARDPERFORMANCE            145
+/** Requested channel is already openend. @ingroup enum **/
+#define HIS_ERROR_HW_BOARD_CHANNEL_ALREADY_USED		146
+/** Error retrieving the Voltage or Current from detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_CURRENT_VOLTAGE			147
+/** Unable to set on detector CPU govenor. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_CPUFREQ_GOVERNOR         148
+
+
 //sort definitions
 
 #define HIS_SORT_NOSORT						0
@@ -559,13 +1476,15 @@ HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, char * filename, void 
 #define HIS_SEQ_LEAKAGE					0x1000
 #define HIS_SEQ_NONLINEAR				0x2000
 #define HIS_SEQ_AVERAGESEQ				0x4000	// sequence of averaged frames
+#define HIS_SEQ_PREVIEW					0x8000
 
 
-#define HIS_SYNCMODE_SOFT_TRIGGER		1
-#define HIS_SYNCMODE_INTERNAL_TIMER		2
-#define HIS_SYNCMODE_EXTERNAL_TRIGGER	3
-#define HIS_SYNCMODE_FREE_RUNNING		4
-#define HIS_SYNCMODE_AUTO_TRIGGER		8 // val 2013-05-13
+#define HIS_SYNCMODE_SOFT_TRIGGER			1
+#define HIS_SYNCMODE_INTERNAL_TIMER			2
+#define HIS_SYNCMODE_EXTERNAL_TRIGGER		3
+#define HIS_SYNCMODE_FREE_RUNNING			4
+#define HIS_SYNCMODE_AUTO_TRIGGER			8
+#define HIS_SYNCMODE_EXTERNAL_TRIGGER_FG	16
 
 #define HIS_CAMMODE_SETSYNC		0x8
 #define HIS_CAMMODE_TIMEMASK	0x7
@@ -582,6 +1501,14 @@ HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, char * filename, void 
 #define HIS_BOARD_TYPE_ELTEC_GbIF				0x20
 #define HIS_BOARD_TYPE_ELTEC_WPE				0x40	// mk 2013-04-16 additional functions for wpe lib
 #define HIS_BOARD_TYPE_ELTEC_EMBEDDED			0x60	// mk 2013-04-16 embedded is gbif and wpe
+
+#define HIS_BOARD_TYPE_CMOS						0x100								// msi 2013-06-20 CMOS are all devices with CMOS FW (until now 1512, 13x13) / => HIS_BOARD_TYPE_DEXELA_1512 | define HIS_BOARD_TYPE_ELTEC_13x13
+//#define HIS_BOARD_TYPE_ELTEC_13x13			0x200
+#define HIS_BOARD_TYPE_ELTEC_13x13				0x320	// msi 2013-06-21 13x13 includes gbif and CMOS / => 0x200 | HIS_BOARD_TYPE_ELTEC_GbIF | HIS_BOARD_TYPE_CMOS
+//#define HIS_BOARD_TYPE_DEXELA_1512CL			0x400
+#define HIS_BOARD_TYPE_DEXELA_1512CL			0x500	// msi 2013-06-21 13x13 includes and CMOS / => 0x400 | HIS_BOARD_TYPE_CMOS
+
+
 
 #define HIS_MAX_TIMINGS							0x8
 
@@ -601,6 +1528,10 @@ HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, char * filename, void 
 #define XIS_DETECTOR_AUTO_TRIGGER_SELECTABLE	0xC
 #define XIS_DETECTOR_SUPPORTED_FOV_MODES		0xD
 #define XIS_DETECTOR_SUPPORTS_EXAM_FLAG			0xE
+#define XIS_DETECTOR_SUPPORTS_IMAGE_TAG			0xF
+#define XIS_DETECTOR_SUPPORTS_PROC_SCRIPT		0x10
+#define XIS_DETECTOR_SUPPORTS_ENHANCED_FEATURES	0x11
+#define XIS_DETECTOR_SUPPORTS_EMI				0x12
 
 
 //Grps 1&2&3&4, 3&4, 2&3, 1&2 ,4, 3, 2, 1
@@ -622,6 +1553,8 @@ HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, char * filename, void 
 #define XIS_DETECTOR_PROVIDES_FOV_1				0x10	// 2013-07-03 val R&F Field Of View
 #define XIS_DETECTOR_PROVIDES_FOV_2				0x20	// 2013-07-03 val R&F Field Of View 2
 #define XIS_DETECTOR_PROVIDES_FOV_3				0x40	// 2013-07-03 val R&F Field Of View 3
+#define XIS_DETECTOR_PROVIDES_FOV_4				0x80	// 2013-07-03 val R&F Field Of View 4
+#define XIS_DETECTOR_PROVIDES_FOV_5				0x100	// 2013-07-03 val R&F Field Of View 5
 
 
 /*
@@ -637,6 +1570,7 @@ HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, char * filename, void 
 #define XIS_DETECTOR_PROVIDES_BINNING_1x2		0x8
 #define XIS_DETECTOR_PROVIDES_BINNING_1x4		0x10
 #define XIS_DETECTOR_PROVIDES_BINNING_3x3		0x20
+#define XIS_DETECTOR_PROVIDES_BINNING_9to4		0x40
 
 #define XIS_DETECTOR_PROVIDES_BINNING_AVG		0x100
 #define XIS_DETECTOR_PROVIDES_BINNING_SUM		0x200
@@ -645,147 +1579,5 @@ HIS_RETURN Acquisition_SetFTPFile(const char * ipAddress, char * filename, void 
 
 
 
-// wpe library includes
-/* Error codes */
-
-
-
-#define WPE_ERR_OK                   0  //!< No error
-#define WPE_ILLEGAL_BUFFER      -10000  //!< A buffer supplied is 0, or a buffer length to small
-#define WPE_ERR_JSON_PARSE      -10001  //!< Json parse error
-#define WPE_ERR_JSON_UNPACK     -10002  //!< Json unpack error
-#define WPE_ERR_SERVER_ERROR    -10003  //!< Web server error
-#define WPE_ERR_CURL_ERROR      -10004  //!< Error returned by the curl library
-#define WPE_ERR_NO_NET_ADAPTER  -10005  //!< No network adapters found
-#define WPE_ERR_ILLEGAL_PARAM   -10006  //!< Illegal parameter
-#define WPE_ERR_BASE64_ENCODE   -10007  //!< Error during base64 encoding
-
-
-
-/** Possible control actions for ::wpe_SystemControl */
-enum wpe_SystemControlEnum {
-	WPE_SYSTEM_CONTROL_REBOOT = 0,      //!< reboot the system 
-	WPE_SYSTEM_CONTROL_RESTART_NETWORK, //!< restart the network
-	WPE_SYSTEM_CONTROL_PS_SOFT_OFF,     //!< powerstate soft-off only pld on
-	WPE_SYSTEM_CONTROL_PS_SLEEP,		//!< sleep (only Zynq and PLD running)
-	WPE_SYSTEM_CONTROL_PS_ON,			//!< SPARTAN, Zynq, PLD on
-	WPE_SYSTEM_CONTROL_PS_READY4EXP,	//!< Ready for exposure
-	WPE_SYSTEM_CONTROL_PS_STORAGE		//!< Everything off
-};
-
-
-
-/**
- * The device info
- *
- */
-struct deviceInfo
-{
-    char device_version[16];             //!< The device version
-    char spec_version[16];               //!< GigE vision spec version
-    char manufacturer_name[32];          //!< The manufactures name
-    char model_name[32];                 //!< The model name
-    char serial_number[16];              //!< The serial number
-    char manufacturer_specific[48];      //!< Some manufacture info
-    char user_name[16];                  //!< Device specific
-};
-
-
-/**
- * The network information
- *
- */
-struct networkInfo
-{
-    char ip[16];        //!< The IP (v4) address as string
-    char mask[16];      //!< The IP mask as string
-    char broadcast[16]; //!< The IP broadcast as string
-    char mac[18];       //!< The MAC address as string    
-};
-
-
-/**
- * The discovery reply
- * 
- */
-struct discoveryReply
-{
-    struct deviceInfo deviceInfo; //!< The device information
-    struct networkInfo lanInfo;   //!< The LAN network setup
-    struct networkInfo wlanInfo;  //!< The WLAN network setup
-    
-    char gvcp_ip[16];             //!< Which IP address is used for image transfer
-};
-
-
-
-#define DISCOVERY_PORT 12345    //!< The default discovery port
-#define DISCOVERY_TIMEOUT 2000  //!< The default discovery timeout
-
-
-
-/**
- * Structure for holding the adapter
- * part of a configuration
- *
- * 
- */
-struct networkAdapterConfiguration
-{
-    int enabled;        //!< Enabled flag
-    int hw_accel;       //!< Used image transfer
-    int bridged;        //!< Is the device in a bridge
-
-    char ifname[16];    //!< Interface name (eth0)
-    char ipaddr[16];    //!< IP address
-    char netmask[16];   //!< Netmask
-    char proto[16];     //!< "static" or "dhcp"
-    char dns[16];       //!< DNS server
-    char gateway[16];   //!< Gateway
-    char macaddr[18];   //!< MAC address
-    
-    char not_used[110]; //!< To fill up the struct to 320 byte
-};
-
-
-/**
- * Wifi configurations
- */
-struct wifiConfiguration
-{
-    char mode[32];      //!< Accesspoint or client
-    char agmode[32];    //!< agmode
-    int channel;        //!< Channel
-
-    char ssid[64];          //!< Own SSID if mode == "ap" or the accesspoints ssid
-    char description[64];   //!< Contains the description in case of a station
-};
-
-
-/**
- * Structure for holding the complete 
- * network configuration.
- * 
- */
-struct networkConfiguration
-{
-    char path[128];         //!< The configurations path
-    char name[80];          //!< The configuration name
-    char hostname[80];      //!< The hostname
-    int readonly;           //!< Is the configuration readonly
-    int sshd_enabled;       //!< SSH daemon enabled
-
-    int gbif_enabled;       //!< Is the GBif enabled
-            
-    struct networkAdapterConfiguration lan;     //!< LAN
-    struct networkAdapterConfiguration wlan;    //!< WLAN
-
-    struct wifiConfiguration wifi; //!< Wifi configuration
-    
-    char notUsed[256];     //!< For later extensions
-};
-
-
-// wpe library includes end
 
 #endif	//_ACQUISITION_H
