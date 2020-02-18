@@ -31,7 +31,7 @@ It implements nearly all of the parameters in
 and in
 `ADArrayDriver.h <../areaDetectorDoxygenHTML/_a_d_driver_8h.html>`__. It
 also implements a number of parameters that are specific to the
-Perkin Elmer cameras. The `PerkinEler class
+Perkin Elmer cameras. The `PerkinElmer class
 documentation <../areaDetectorDoxygenHTML/class_perkin_elmer.html>`__
 describes this class in detail.
 
@@ -40,10 +40,6 @@ Implementation of standard driver parameters
 
 The following table describes how the PerkinElmer driver implements some
 of the standard driver parameters.
-
-.. |br| raw:: html
-
-    <br>
 
 .. cssclass:: table-bordered table-striped table-hover
 .. flat-table::
@@ -58,29 +54,35 @@ of the standard driver parameters.
     - Controls the number of images to acquire when ADImageMode is ``Multiple`` or ``Average``
   * - AcquireTime, AcquireTime_RBV
     - When TriggerMode= ``Internal`` or ``Soft Trigger`` this value controls the exposure time,
-      both for SynchMode= ``Framewise`` and ``DDD No Clear``. |br|
+      both for SynchMode= ``Framewise`` and ``DDD No Clear``.
+
       When TriggerMode= ``External`` and SynchMode= ``DDD No Clear`` this value also controls
-      the exposure time. |br|
+      the exposure time.
+
       When TriggerMode= ``External`` and SynchMode= ``Framewise`` the exposure time is determined
-      by the time between trigger pulses, not by AcquireTime. |br|
+      by the time between trigger pulses, not by AcquireTime.
+
       When TriggerMode= ``Free Running`` the AcquireTime is ignored, and the detector runs
       at the maximum possible frame rate and a fixed exposure time.
   * - TriggerMode, TriggerMode_RBV
-    - Sets the trigger mode for the detector. Options are: |br|
-      ``Internal`` |br|
-      ``External`` |br|
-      ``Free Running`` |br|
-      ``Soft Trigger`` |br|
+    - Sets the trigger mode for the detector. Options are:
+
+      - Internal
+      - External
+      - Free Running
+      - Soft Trigger
+
       See the `Synchronization and triggering`_ section below
       for more details about synchronization and triggering.
   * - ImageMode, ImageMode_RBV
-    - Sets the trigger mode for the detector. Options are: |br|
-      ``Single`` |br|
-      ``Multiple`` |br|
-      ``Continuous`` |br|
-      ``Average`` This mode is new for the Perkin Elmer. It averages NumImages frames in
-      the hardware frame grabber. It is useful when the total acquisition time is longer
-      than the 5 second maximum allowed in Internal trigger mode, etc.
+    - Sets the trigger mode for the detector. Options are:
+
+      - Single
+      - Multiple
+      - Continuous
+      - Average This mode is new for the Perkin Elmer. It averages NumImages frames in
+        the hardware frame grabber. It is useful when the total acquisition time is longer
+        than the 5 second maximum allowed in Internal trigger mode, etc.
 
 PerkinElmer specific parameters
 -------------------------------
@@ -91,74 +93,61 @@ to those in asynNDArrayDriver.h and ADDriver.h.
 .. cssclass:: table-bordered table-striped table-hover
 .. flat-table::
   :header-rows: 2
-  :widths: 70 10 10 10
+  :widths: 70 10 10
 
-  * - **Parameter Definitions in PerkinElmer.h and EPICS Record Definitions in PerkinElmer.template**
+  * - Parameter Definitions in PerkinElmer.h and EPICS Record Definitions in PerkinElmer.template
   * - Description
-    - drvInfo string
     - EPICS record names (preceeded with $(P)$(R))
     - EPICS record types
   * - Number of software frame buffers to use
-    - PE_NUM_FRAME_BUFFERS
     - PENumFrameBuffers, PENumFrameBuffers_RBV
     - longout, longin
   * - Initialize the detector
-    - PE_INITIALIZE
     - PEInitialize
     - bo
   * - Trigger record for soft trigger mode
-    - PE_TRIGGER
     - PETrigger
     - bo
   * - Frame number from the hardware frame buffer for this image. Values go from 1 to 8.
-    - PE_FRAME_BUFFER_INDEX
     - PEFrameBuffIndex
     - longin
   * - Image number for this image in the software frame buffer array.
-    - PE_IMAGE_NUMBER
     - PEImageNumber
     - longin
   * - Gain selection in units of pF capacitance. Choices are 0.25, 0.5, 1, 2, 4, and 8.
-    - PE_GAIN
     - PEGain, PEGain_RBV
     - mbbo, mbbi
-  * - Synchronization mode. Choices are: |br|
-      ``DDD Clear`` This mode has not been tested and clear documentation on it seems
-      to be missing. |br|
-      ``DDD No Clear`` This is Data Delivered on Demand mode. It discards the next frame
-      and then starts acquiring a new frame for the specified acquisition time. |br|
-      ``Linewise`` This is a specialized mode that requires an external timing source.
-      It has not been tested with the EPICS driver. See the manual for details. |br|
-      ``Framewise`` This is the normal default mode. The next frame delivered from the
-      detector is stored. |br|
-      ``AutoTrigger`` This mode is only available on the XRPAD. It automatically triggers
-      a readout when the number of x-rays striking the detecotor reaches a defined threashold. |br|
-      See the `Synchronization and triggering`_ section below
-      for more details about synchronization and triggering.
-    - PE_SYNC_MODE
+  * - Synchronization mode. Choices are:
+
+      - DDD Clear This mode has not been tested and clear documentation on it seems to be missing.
+      - DDD No Clear This is Data Delivered on Demand mode. It discards the next frame
+        and then starts acquiring a new frame for the specified acquisition time.
+      - Linewise  This is a specialized mode that requires an external timing source.
+        It has not been tested with the EPICS driver. See the manual for details.
+      - Framewise This is the normal default mode. The next frame delivered from the
+        detector is stored.
+      - AutoTrigger This mode is only available on the XRPAD. It automatically triggers
+        a readout when the number of x-rays striking the detecotor reaches a defined threashold.
+
+        See the `Synchronization and triggering`_ section below for more details about synchronization and triggering.
     - PESyncMode, PESyncMode_RBV
     - mbbo, mbbi
   * -
     - **Offset corrections**
   * - Number of frames to collect and average when collecting offset frames
-    - PE_NUM_OFFSET_FRAMES
     - PENumOffsetFrames
     - longout
   * - Current offset frame being collected when collecting offset frames
-    - PE_CURRENT_OFFSET_FRAMEs
     - PECurrentOffsetFrame
     - longin
   * - Acquire offset frames
-    - PE_ACQUIRE_OFFSET
     - PEAcquireOffset
     - busy
   * - Set whether offset image is to be used. Choices are ``Disable`` (0) and ``Enable`` (1).
-    - PE_USE_OFFSET
     - PEUseOffset
     - bo
   * - Report whether offset image has been collected and is available for use. Choices
       are ``Not available`` (0) and ``Available`` (1).
-    - PE_OFFSET_AVAILABLE
     - PEOffsetAvailable
     - bi
   * - An offset that is added to the image when the offset correction is performed. CorrectedImage
@@ -166,72 +155,62 @@ to those in asynNDArrayDriver.h and ADDriver.h.
       the CorrectedImage from having any negative pixel values, which would otherwise
       be clipped to 0. For efficiency this value is actually subtracted from the offset
       image as soon as it is collected, so it is then effectively added to each image
-      when offset correction is done. This results in 2 restrictions: |br|
+      when offset correction is done. This results in 2 restrictions:
+
       1) PEOffsetConstant must be specified before the offset images are collected. If
-      it is changed then the offset images must be collected again. |br|
+         it is changed then the offset images must be collected again.
       2) The value must be less than the minimum value of the offset image, or else negative
-      values will result. In practice this should not be a problem, since an offset of
-      100 should be sufficient to prevent negative values during offset correction, and
-      the offset images are always greater than 100.
-    - PE_OFFSET_CONSTANT
+         values will result. In practice this should not be a problem, since an offset of
+         100 should be sufficient to prevent negative values during offset correction, and
+         the offset images are always greater than 100.
     - PEOffsetContant, PEOffsetContant_RBV
     - longout, longin
 
   * -
     - **Gain corrections**
   * - Number of frames to collect and average when collecting gain frames
-    - PE_NUM_GAIN_FRAMES
     - PENumGainFrames
     - longout
   * - Current gain frame being collected when collecting gain frames
-    - PE_CURRENT_GAIN_FRAMEs
     - PECurrentGainFrame
     - longin
   * - Acquire gain frames
-    - PE_ACQUIRE_GAIN
     - PEAcquireGain
     - busy
   * - Set whether gain image is to be used. Choices are ``Disable`` (0) and ``Enable`` (1).
-    - PE_USE_GAIN
     - PEUseGain
     - bo
   * - Report whether offset image has been collected and is available for use. Choices
-      are ``Not available`` (0) and ``Available`` (1).
-    - PE_GAIN_AVAILABLE
+      are:
+
+      - Not available (0)
+      - Available`` (1)
     - PEGainAvailable
     - bi
   * - File name for gain correction file
-    - PE_GAIN_FILE
     - PEGainFile
     - waveform
   * - Save gain corrections to a file
-    - PE_SAVE_GAIN_FILE
     - PESaveGainFile
     - bo
   * - Load gain corrections from a file
-    - PE_LOAD_GAIN_FILE
     - PELoadGainFile
     - bo
   * -
     - **Bad pixel corrections**
   * - Set whether bad pixel correction is to be used
-    - PE_USE_PIXEL_CORRECTION
     - PEUsePixelCorrection
     - bo
   * - Report whether pixel correction file has been set and is available for use
-    - PE_PIXEL_CORRECTION_AVAILABLE
     - PEPixelCorrectionAvailable
     - bi
   * - File name for pixel correction file
-    - PE_PIXEL_CORRECTION_FILE
     - PEPixelFile
     - waveform
   * - Directory where gain and pixel correction files should be stored
-    - PE_CORRECTIONS_DIRECTORY
     - PECorrectionsDir
     - waveform
   * - Load pixel corrections from a file for use
-    - PE_LOAD_PIXEL_CORRECTION_FILE
     - PELoadPixelCorrections
     - bo
   * -
@@ -239,12 +218,10 @@ to those in asynNDArrayDriver.h and ADDriver.h.
   * - Set whether to skip initial PENumFramesToSkip frames from the detector on each acquisition.
       This can be used to discard the first frame which may contain data from before acquisition
       was started.
-    - PE_SKIP_FRAMES
     - PESkipFrames, PESkipFrames_RBV
     - bo, bi
   * - Sets the number of initial frames from the detector to skip on each acquisition
       if PESkipFrames=1.
-    - PE_NUM_FRAMES_TO_SKIP
     - PENumFramesToSkip, PENumFramesToSkip_RBV
     - longout, longin
 
