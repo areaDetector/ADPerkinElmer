@@ -184,7 +184,10 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
                               epicsThreadGetStackSize(epicsThreadStackMedium),
                               (EPICSTHREADFUNC)acquireStopTaskC,
                               this) == NULL);
-  initializeDetector();
+  if (!initializeDetector()) {
+    this->deviceIsConnected = false;
+    this->disconnect(pasynUserSelf);
+  }
 
   // Set exit handler to clean up
   epicsAtExit(exitCallbackC, this);
