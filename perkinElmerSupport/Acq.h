@@ -29,7 +29,7 @@ extern "C" {
 
 #define __NOASM
 
-#define __X64 // Define this for the 64bit Driver Version
+//#define __X64 // Define this for the 64bit Driver Version
 #ifdef _WIN64
 #   ifndef __X64
 #       define __X64
@@ -122,7 +122,7 @@ typedef struct
 	GBIF_STRING_DATATYPE	ucAdapterMask[GBIF_IP_MAC_NAME_CHAR_ARRAY_LENGTH];
 
 	DWORD					dwIPCurrentBootOptions;
-	CHAR 					cManufacturerName[32];										// PerkinElmer
+	CHAR 					cManufacturerName[32];
 	CHAR					cModelName[32];												// GBIF
 	CHAR					cGBIFFirmwareVersion[32];
 	CHAR					cDeviceName[16];
@@ -218,17 +218,17 @@ typedef struct
 #pragma pack(push, 1)
 typedef struct
 {
-	WORD FileType;			// File ID (0x7000)
-	WORD HeaderSize;		// Size of this file header in Bytes
-	WORD HeaderVersion;		// 100
-    UINT FileSize;			// Size of the whole file in Bytes ( HeaderSize+ImageHeaderSize+Frames*rows*columns*datatypesize )
-	WORD ImageHeaderSize;	// Size of the image header in Bytes
-	WORD ULX, ULY, BRX, BRY;// bounding rectangle of the image
-	WORD NrOfFrames;		// Nr of Frames in seq
-	WORD Correction;		// 0 = none, 1 = offset, 2 = gain, 4 = bad pixel, (ored) can be 0
-	double IntegrationTime;	// frame time in microseconds can by 0
-	WORD TypeOfNumbers;		// refer to enum XIS_FileType
-	BYTE x[WINRESTSIZE];		// fill up to 68 byte
+	WORD FileType;			//!<  File ID (0x7000)
+	WORD HeaderSize;		//!<  Size of this file header in Bytes
+	WORD HeaderVersion;		//!<  Must be 100, default XIS file header not to be used for onboard 
+    UINT FileSize;			//!<  Size of the whole file in Bytes ( HeaderSize+ImageHeaderSize+Frames*rows*columns*datatypesize )
+	WORD ImageHeaderSize;	//!<  Size of the Image header in Bytes 32 Bytes, values can be all zero
+	WORD ULX, ULY, BRX, BRY;//!<  Bounding rectangle of the image
+	WORD NrOfFrames;		//!<  Nr of Frames in seq
+	WORD Correction;		//!<  0 = none, 1 = offset, 2 = gain, 4 = bad pixel, (ored) can be 0
+	double IntegrationTime;	//!<  Frame time in microseconds can by 0
+	WORD TypeOfNumbers;		//!<  Refer to enum XIS_FileType
+	BYTE x[WINRESTSIZE];	//!<  Fill up this struct to have a size of 68 bytes (FileHeaderSize)
 } WinHeaderType;
 
 
@@ -236,18 +236,18 @@ typedef struct
 
 typedef struct 
 {
-	WORD FileType;			// File ID (0x7000)
-	WORD HeaderSize;		// Size of this file header in Bytes
-	WORD HeaderVersion;		// 101
-	UINT FileSize;			// Size of the whole file in Bytes ( HeaderSize+ImageHeaderSize+Frames*rows*columns*datatypesize )
-	WORD ImageHeaderSize;	// Size of the image header in Bytes
-	WORD ULX, ULY, BRX, BRY;// bounding rectangle of the image
-	WORD NrOfFrames;		// Nr of Frames in seq
-	WORD Correction;		// 0 = none, 1 = offset, 2 = gain, 4 = bad pixel, (ored) can be 0
-	double IntegrationTime;	// frame time in microseconds
-	WORD TypeOfNumbers;		// refer to enum XIS_FileType
-	WORD wMedianValue;		// median of the image / can be 0. use 0 for onboard corrections. meadian for gain corr will be automatically calculated
-	BYTE x[WINRESTSIZE101];	// fill up to 68 byte
+	WORD FileType;			//!<  File ID (0x7000)
+	WORD HeaderSize;		//!<  Size of this file header in Bytes
+	WORD HeaderVersion;		//!<  Must be 101 for Onboard file Header used by XRpad[2] using this file type for onboard corrections
+	UINT FileSize;			//!<  Size of the whole file in Bytes ( HeaderSize+ImageHeaderSize+Frames*rows*columns*datatypesize )
+	WORD ImageHeaderSize;	//!<  Size of the Image header in Bytes 2048 Bytes, values can be all zero
+	WORD ULX, ULY, BRX, BRY;//!<  Bounding rectangle of the image
+	WORD NrOfFrames;		//!<  Nr of Frames in seq
+	WORD Correction;		//!<  0 = none, 1 = offset, 2 = gain, 4 = bad pixel, (ored) can be 0
+	double IntegrationTime;	//!<  Frame time in microseconds
+	WORD TypeOfNumbers;		//!<  Refer to enum XIS_FileType must be PKI_ERRORMAPONBOARD ( 1bit per pixel images filled up to full byte) or PKI_SHORT (2Bytes per Pixel) for onboard usage
+	WORD wMedianValue;		//!<  Median of the image / shall be 0. use 0 for onboard corrections. median for gain corr will be automatically calculated
+	BYTE x[WINRESTSIZE101];	//!<  Fill up this struct to have a size of 68 bytes (FileHeaderSize)
 } WinHeaderType101;
 
 #pragma pack(pop)
@@ -266,14 +266,14 @@ typedef struct
 
 typedef struct
 {
-	unsigned char	wTiming;		//	Timing und Triggermode
-	unsigned char	wValue0;		// 
-	unsigned char	wValue1;
-	unsigned char	wValue2;
-	unsigned char	wValue3;
-	unsigned char	wValue4;
-	unsigned char	wValue5;
-	unsigned char	wValue6;
+	unsigned char	wTiming;		// Timing und Triggermode
+	unsigned char	wValue0;		// value 3 HIGHBYTE
+	unsigned char	wValue1;        // value 3 LOBYTE
+	unsigned char	wValue2;        // value 2 HIGHBYTE
+	unsigned char	wValue3;        // value 2 LOBYTE
+	unsigned char	wValue4;        // value 1 HIGHBYTE
+	unsigned char	wValue5;        // value 1 LOBYTE
+	unsigned char	wValue6;        // command to send
 } FPGAType;					// 8 Byte werden bertragen
 
 
@@ -341,18 +341,20 @@ typedef struct DETECTOR_CURRENT_VOLTAGE{
   int imA2;
   int iV3;
   int imA3;
-}DETECTOR_CURRENT_VOLTAGE;
+} DETECTOR_CURRENT_VOLTAGE;
+
 
 /** Possible system control actions for XRpad 
 * @ingroup enum
 */
 typedef enum {
-	XRpad_SYSTEM_CONTROL_REBOOT = 0,           // restart XRpad 
-	XRpad_SYSTEM_CONTROL_RESTART_NETWORK = 1,  // restart XRpad Network 
-	XRpad_SYSTEM_CONTROL_SHUTDOWN = 2,         // shutdown XRpad
-	XRpad_SYSTEM_CONTROL_SET_DEEP_SLEEP = 3,   // power down analog circuitry and sensor FPGA
-	XRpad_SYSTEM_CONTROL_SET_IDLE = 4          // power up analog circuitry and sensor FPGA
+	XRpad_SYSTEM_CONTROL_REBOOT = 0,           //!<  restart XRpad 
+	XRpad_SYSTEM_CONTROL_RESTART_NETWORK = 1,  //!<  restart XRpad Network 
+	XRpad_SYSTEM_CONTROL_SHUTDOWN = 2,         //!<  shutdown XRpad
+	XRpad_SYSTEM_CONTROL_SET_DEEP_SLEEP = 3,   //!<  power down analog circuitry and sensor FPGA
+	XRpad_SYSTEM_CONTROL_SET_IDLE = 4          //!<  power up analog circuitry and sensor FPGA
 } XRpad_SystemControlEnum;
+
 
 /**
 * @ingroup enum
@@ -365,6 +367,7 @@ typedef struct XRpad_TempSensor
     unsigned char   warn_level;
     double          temperature;
 } XRpad_TempSensor;
+
 
 /**
 * @ingroup enum
@@ -383,12 +386,12 @@ typedef struct XRpad_TempSensorReport
 */
 typedef enum XRpad_ChargeMode
 {
-    XRpad_NOT_CHARGING = 0,
-    XRpad_CHARGING_SLOW = 1,
-    XRpad_CHARGING_NORMAL = 2,
-    XRpad_CHARGING_FAST = 3,
-    XRpad_FULLY_CHARGED = 4,
-    XRpad_DISCHARGING = 5
+    XRpad_NOT_CHARGING      = 0,    //!< Charging disabled
+    XRpad_CHARGING_SLOW     = 1,    //!< Charging slowly
+    XRpad_CHARGING_NORMAL   = 2,    //!< Charging normal
+    XRpad_CHARGING_FAST     = 3,    //!< Charging fast
+    XRpad_FULLY_CHARGED     = 4,    //!< Battery is fully charged
+    XRpad_DISCHARGING       = 5     //!< Battery is discharging
 } XRpad_ChargeMode;
 
 
@@ -397,9 +400,10 @@ typedef enum XRpad_ChargeMode
 */
 typedef enum XRpad_BatteryPresence
 {
-    XRpad_NO_BATTERY = 0,
-    XRpad_BATTERY_INSERTED = 1,
-    XRpad_DUMMY_INSERTED = 2
+    XRpad_NO_BATTERY        = 0,    //!< No battery detecte
+    XRpad_BATTERY_INSERTED  = 1,    //!< Battery detected
+    XRpad_DUMMY_INSERTED    = 2,    //!< Dummy battery detected (unused)
+    XRpad_BATTERY_COM_ERR   = 3     //!< Communication error on SMBUS
 } XRpad_BatteryPresence;
 
 
@@ -408,13 +412,13 @@ typedef enum XRpad_BatteryPresence
 */
 typedef enum XRpad_BatteryHealth
 {
-    XRpad_BATTERY_OK                    = 0x0000,
-    XRpad_COMMUNICATION_ERROR           = 0x0001,
-    XRpad_TERMINATE_DISCHARGE_ALARM     = 0x0002,
-    XRpad_UNDERVOLTAGE_ALARM            = 0x0004,
-    XRpad_OVERVOLTAGE_ALARM             = 0x0008,
-    XRpad_OVERTEMPERATURE_ALARM         = 0x0010,
-    XRpad_BATTERY_UNKNOWN_ERROR         = 0x0080,
+    XRpad_BATTERY_OK                    = 0x0000,   //!< All OK
+    XRpad_COMMUNICATION_ERROR           = 0x0001,   //!< Communication error on SMBUS
+    XRpad_TERMINATE_DISCHARGE_ALARM     = 0x0002,   //!< Battery is nearly empty but still discharging
+    XRpad_UNDERVOLTAGE_ALARM            = 0x0004,   //!< Battery voltage is to low will be stopped
+    XRpad_OVERVOLTAGE_ALARM             = 0x0008,   //!< Battery voltage is to high charging will be stopped
+    XRpad_OVERTEMPERATURE_ALARM         = 0x0010,   //!< Battery temperature is to high chargin will be stopped
+    XRpad_BATTERY_UNKNOWN_ERROR         = 0x0080,   //!< Unknown error reported by battery controller
 
 } XRpad_BatteryHealth;
 
@@ -424,15 +428,15 @@ typedef enum XRpad_BatteryHealth
 */
 typedef struct XRpad_BatteryStatus
 {
-    XRpad_BatteryPresence   presence;
-    int                     design_capacity;
-    int                     remaining_capacity;
-    int                     charge_state;
-    XRpad_ChargeMode        charge_mode;
-    int                     cycle_count;
-    int                     temperature;
-    int                     authenticated;
-    int                     health;
+    XRpad_BatteryPresence   presence;              //!< Provides the information if a battery is present (XRpad_BatteryPresence).
+    int                     design_capacity;       //!< Displays the information of the original capacity of this battery.
+    int                     remaining_capacity;    //!< Retrieves the information about the remaining charge in mA.
+    int                     charge_state;          //!< Retrieves the information about the charge status in percent.
+    XRpad_ChargeMode        charge_mode;           //!< Retrieves the current charge mode (XRpad_ChargeMode). 
+    int                     cycle_count;           //!< Retrieves number of charging cycles.
+    int                     temperature;           //!< Retrieves the temperature of the battery.
+    int                     authenticated;         //!< Retrieves the information if an OEM battery is used.
+    int                     health;                //!< Displays the overall status of the battery which is an ored combination of the XRpad_BatteryHealth enum values provided by the battery controller
 } XRpad_BatteryStatus;
 
 
@@ -487,8 +491,8 @@ typedef struct XRpad_VersionInfo
 * @ingroup enum
 */
 typedef enum XRpad_DataInterfaceControlEnum{
-    XRpad_DATA_VIA_LAN = 0,             // use LAN
-    XRpad_DATA_VIA_WLAN = 1             // use WLAN
+    XRpad_DATA_VIA_LAN = 0,             //!<  use LAN
+    XRpad_DATA_VIA_WLAN = 1             //!<  use WLAN
 } XRpad_DataInterfaceControlEnum;
 
 
@@ -641,6 +645,7 @@ typedef enum XIS_Event
    XE_DETECTOR_EVENT    = 0x00000008,
    XE_LIBRARY_EVENT     = 0x00000009,
    XE_SDCARD_FSCK_EVENT = 0x0000000A,
+   XE_XRPD_EVENT        = 0x0000000B,
 } XIS_Event;
 
 /**
@@ -650,6 +655,8 @@ typedef enum XIS_Acquisition_Event
 {
     XAE_TRIGOUT          = 0x00000002,
     XAE_READOUT          = 0x00000004,
+    XAE_TRIGGERED        = 0x00000008,
+    XAE_AED_READY        = 0x00000010,
 } XIS_Acquisition_Event;
 
 /**
@@ -681,6 +688,8 @@ typedef enum XIS_Detector_Event
     XDE_BUFFERS_IN_USE                  = 0x00000001,
     XDE_STORED_IMAGE                    = 0x00000002,
     XDE_DROPPED_IMAGE                   = 0x00000003,
+    XDE_POWER_STATE_CHANGED             = 0x00000004, //!<value 2 success: new power state
+    XDE_POWER_STATE_CHANGE_FAILED       = 0x00000005  //!<value 2 error: code XRPD_ERROR_SWITCH_PWR_STATE_BLOCKED_BY_EXAM 0x0052, any other: internal error
 } XIS_Detector_Event;
 
 /**
@@ -691,6 +700,14 @@ typedef enum XIS_Library_Event
 	XLE_HIS_ERROR_PACKET_LOSS           = 0x00000001, //!< Frame is lost. not all network packages could be received
 } XIS_Library_Event;
 
+/**
+* @ingroup enum
+*/
+typedef enum XIS_Xrpd_Event
+{
+    XXE_CONNECTION_LOST                 = 0x00000001, //!< Connection to XRpad Daemon unexpectedly closed
+    XXE_RECONNECTED                     = 0x00000002, //!< Connection re-established automatically
+} XIS_Xrpd_Event;
 
 
 typedef void (*XIS_EventCallback)(XIS_Event, UINT, UINT, void *, void *);
@@ -818,7 +835,7 @@ struct wifiConfiguration
 {
 	char mode[32];      //!< Accesspoint or client
 	char agmode[32];    //!< agmode
-	int channel;        //!< Channel
+	int channel;        //!< Channel, only valid options will be accepted, use 0 for automatically select channel, otherwise will return with error
 
 	char ssid[64];          //!< Own SSID if mode == "ap" or the accesspoints ssid
 	char description[64];   //!< Contains the description in case of a station
@@ -832,7 +849,7 @@ struct wifiConfigurationEx
 {
 	char mode[32];      //!< Accesspoint or client
 	char agmode[32];    //!< agmode
-	int channel;        //!< Channel, only valid options will be accepted, otherwise will return with error
+	int channel;        //!< Channel, only valid options will be accepted, use 0 for automatically select channel, otherwise will return with error
 
 	char ssid[64];          //!< Own SSID if mode == "ap" or the accesspoints ssid
 	char description[64];   //!< Contains the description in case of a station
@@ -1027,7 +1044,8 @@ HIS_RETURN Acquisition_GbIF_DiscoveredDetectorCount(long *pDeviceCount);
 HIS_RETURN Acquisition_GbIF_DiscoveredDetectorByIndex(long lIndex, GBIF_DEVICE_PARAM *pDevice);
 HIS_RETURN Acquisition_GbIF_SetDiscoveryTimeout(long timeout);
 
-HIS_RETURN Acquisition_wpe_GetVersionNEW(int * major, int * minor, int * release, int * build);
+HIS_RETURN Acquisition_wpe_GetVersionNEW(int * major, int * minor, int * release, int * build); // deprecated!
+HIS_RETURN Acquisition_wpe_GetVersionEx(int *pMajor, int* pMinor, int *pRelease, char *pStrVersion, int iStrLength);
 HIS_RETURN Acq_WPE_Init();
 
 HIS_RETURN Acquisition_wpe_ForceIP(const char* macAddress, struct networkConfiguration* config, int port, int *isAnswered);
@@ -1088,13 +1106,15 @@ HIS_RETURN Acquisition_wpe_GetErrorCode(void);
 HIS_RETURN Acquisition_wpe_GetErrorCodeEx(char *pBuffer, long len);
 
 // mk 2013-04-19 end
-HIS_RETURN Acquisition_GetTriggerOutStatus(HACQDESC hAcqDesc, int* iTriggerStatus); /// 2013-04-22 Val GetTriggerStatus GbIF 
+HIS_RETURN Acquisition_GetTriggerOutStatus(HACQDESC hAcqDesc, int* iTriggerStatus); // 2013-04-22 Val GetTriggerStatus GbIF 
 
 HIS_RETURN Acquisition_SetCameraFOVMode(HACQDESC hAcqDesc, WORD wMode); // 2013-07-03 val R&F Field Of View 
 HIS_RETURN Acquisition_GetCameraFOVMode(HACQDESC hAcqDesc, WORD* wMode); // 2013-07-03 val R&F Field Of View 
 
 HIS_RETURN Acquisition_wpe_ReadCameraRegisters(const char * ipAddress, unsigned long * buffer);
+HIS_RETURN Acquisition_xrpd_ReadCameraRegisters(HACQDESC hAcqDesc, unsigned long * buffer);
 HIS_RETURN Acquisition_wpe_GetExamFlag(const char * ipAddress, unsigned long *pExamFlag);
+HIS_RETURN Acquisition_xrpd_GetExamFlag(HACQDESC hAcqDesc, unsigned long *pExamFlag);
 HIS_RETURN Acq_wpe_SystemControl(const char * ipAddress, XRpad_SystemControlEnum eAction);
 HIS_RETURN Acq_wpe_SetImageTransferInterface(const char *ipAddress, XRpad_DataInterfaceControlEnum eInterface);
 HIS_RETURN Acq_wpe_GetSystemInformation(const char * ipAddress, char *buffer, int bufferLen);
@@ -1151,6 +1171,7 @@ HIS_RETURN Acquisition_IdentifyDevice(HACQDESC hAcqDesc);
 HIS_RETURN Acquisition_Resend_All_Messages(HACQDESC hAcqDesc);
 HIS_RETURN Acquisition_GetLocation(HACQDESC hAcqDesc, unsigned int *location);
 HIS_RETURN Acquisition_GetNetwork(HACQDESC hAcqDesc, unsigned int *network);
+HIS_RETURN Acquisition_GetNetworkSpeed(HACQDESC hAcqDesc, unsigned int *network);
 HIS_RETURN Acquisition_SetNetworkSpeed(HACQDESC hAcqDesc, unsigned int network);
 HIS_RETURN Acquisition_SetIdleTimeout(HACQDESC hAcqDesc, unsigned short timeout);
 HIS_RETURN Acquisition_SetChargeMode(HACQDESC hAcqDesc, unsigned char charge_mode);
@@ -1160,12 +1181,13 @@ HIS_RETURN Acquisition_SetTemperatureTimeout(HACQDESC hAcqDesc, unsigned short t
 HIS_RETURN Acquisition_ResetTemperatureTimeout(HACQDESC hAcqDesc);
 HIS_RETURN Acquisition_SetTemperatureThresholds(HACQDESC hAcqDesc, unsigned int threshold_warning, unsigned int threshold_critical);
 HIS_RETURN Acquisition_GetTemperatureThresholds(HACQDESC hAcqDesc, unsigned int *threshold_warning, unsigned int *threshold_critical);
+HIS_RETURN Acquisition_GetTemperature(HACQDESC hAcqDesc, unsigned int (*current_value)[8]);
 HIS_RETURN Acquisition_GetBatteryStatus(HACQDESC hAcqDesc, XRpad_BatteryStatus *batteryStatus);
 HIS_RETURN Acquisition_Get_Current_Voltage(HACQDESC hAcqDesc, DETECTOR_CURRENT_VOLTAGE *pstructCurrentVoltage);
 HIS_RETURN Acquisition_CreateFakeShockWarningLevel(HACQDESC hAcqDesc);
 HIS_RETURN Acquisition_CreateFakeShockCriticalLevel(HACQDESC hAcqDesc);
 HIS_RETURN Acquisition_FactoryResetShock(HACQDESC hAcqDesc);
-HIS_RETURN Acquisition_SetSystemTime(HACQDESC hAcqDesc, char* cDateTime);
+HIS_RETURN Acquisition_SetSystemTime(HACQDESC hAcqDesc, const char *cDateTime);
 HIS_RETURN Acquisition_GetPowerstate(HACQDESC hAcqDesc, unsigned int *powerstate);
 HIS_RETURN Acquisition_GetAutoPowerOnLocations(HACQDESC hAcqDesc, unsigned int *autopoweronlocations);
 HIS_RETURN Acquisition_SetAutoPowerOnLocations(HACQDESC hAcqDesc, unsigned int autopoweronlocations);
@@ -1177,7 +1199,14 @@ HIS_RETURN Acquisition_GetIpAdress(HACQDESC hAcqDesc, const char **ipAddress);
 HIS_RETURN Acquisition_Test_SDCardPerformance(HACQDESC hAcqDesc, unsigned int buffersize,
                                               double *wbitrate, unsigned int *wmicroseconds,
                                               double *rbitrate, unsigned int *rmicroseconds);
-
+HIS_RETURN Acquisition_Enable_TestPattern(HACQDESC hAcqDesc, unsigned int uiOnOff);
+HIS_RETURN Acquisition_GetWLAN_CountryCode(HACQDESC hAcqDesc, char *wlan_cc_str);
+HIS_RETURN Acquisition_SetWLAN_CountryCode(HACQDESC hAcqDesc, const char * wlan_cc_value);
+HIS_RETURN Acquisition_GetWLAN_ChannelList(HACQDESC hAcqDesc, char * wlan_channel_list_str, size_t wlan_channel_list_len);
+HIS_RETURN Acquisition_DisableSyslogSaving(HACQDESC hAcqDesc);
+HIS_RETURN Acquisition_SetAEDOptions(HACQDESC hAcqDesc, unsigned short usMode, unsigned short usOffsetImageDelay, unsigned short usSelectReadoutSection);
+HIS_RETURN Acquisition_GetAutoDeepSleepIdleLocations(HACQDESC hAcqDesc, unsigned int *autoDeepSleepLocations, unsigned int *autoIdleLocations);
+HIS_RETURN Acquisition_SetAutoDeepSleepIdleLocations(HACQDESC hAcqDesc, unsigned int autoDeepSleepLocations, unsigned int autoIdleLocations);
 
 
 
@@ -1444,7 +1473,36 @@ HIS_RETURN Acquisition_Test_SDCardPerformance(HACQDESC hAcqDesc, unsigned int bu
 #define HIS_ERROR_XRPD_GET_CURRENT_VOLTAGE			147
 /** Unable to set on detector CPU govenor. @ingroup enum **/
 #define HIS_ERROR_XRPD_SET_CPUFREQ_GOVERNOR         148
-
+/** Unable to get on detector WLAN country code info. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_WLAN_CC                  149
+/** Unable to get on detector WLAN country code. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_WLAN_CC                  150
+/** Unable to get on detector WLAN channel list info. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_WLAN_ChannelList         151
+/** Unable to disable the saving og the syslog. @ingroup enum **/
+#define HIS_ERROR_XRPD_DISABLE_SYSLOG_SAVING        152
+/** Could not set on detector packet delay. @ingroup enum **/
+#define HIS_ERROR_SET_PACKET_DELAY                  153
+/** Could not retrieve available systems. @ingroup enum **/
+#define HIS_ERROR_GET_AVAILABLE_SYSTEMS              154
+/** Error retrieving the deep-sleep idle change locations from the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_DEEPSLEEPIDLELOCATIONS    155
+/** Error setting the deep-sleep idle change locations from the detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_DEEPSLEEPIDLELOCATIONS    156
+/** Function returned error since detector is in deep sleep and does not support the function in that state. @ingroup enum **/
+#define HIS_ERROR_XRPD_DETECTOR_IN_DEEP_SLEEP        157
+/** unable to get temp values from detector. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_TEMP_VALUES               158
+/** unable to get epc register. @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_EPC_REGISTER              159
+/** unable to set header size. @ingroup enum **/
+#define HIS_ERROR_SETHEADERSIZE                      160
+/** unable to set register Timeout size. @ingroup enum **/
+#define HIS_ERROR_SETREGISTERTIMEOUT                 161
+/** unable to set epc register. @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_EPC_REGISTER              162
+/** unable to communicate with battery. @ingroup enum **/
+#define HIS_ERROR_XRPD_BATTERY_COM                   163
 
 //sort definitions
 
@@ -1532,7 +1590,7 @@ HIS_RETURN Acquisition_Test_SDCardPerformance(HACQDESC hAcqDesc, unsigned int bu
 #define XIS_DETECTOR_SUPPORTS_PROC_SCRIPT		0x10
 #define XIS_DETECTOR_SUPPORTS_ENHANCED_FEATURES	0x11
 #define XIS_DETECTOR_SUPPORTS_EMI				0x12
-
+#define XIS_DETECTOR_SUPPORTS_AED_MODE_CHANGE   0x13 // Detector provides AED with post offset, delay and section selection
 
 //Grps 1&2&3&4, 3&4, 2&3, 1&2 ,4, 3, 2, 1
 #define XIS_DETECTOR_PROVIDES_ROI_GRP_1			0x1
