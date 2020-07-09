@@ -185,7 +185,7 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
                               (EPICSTHREADFUNC)acquireStopTaskC,
                               this) == NULL);
   if (!initializeDetector()) {
-    this->deviceIsConnected = false;
+    this->deviceIsReachable = false;
     this->disconnect(pasynUserSelf);
   }
 
