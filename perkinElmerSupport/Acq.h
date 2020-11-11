@@ -82,11 +82,15 @@ typedef HANDLE HACQDESC;
     typedef unsigned int DEX_RETURN;
 #else
 	// Windows
+	#ifndef USE_XISL_AS_STATIC_LIB
     #ifdef _DLL_EXPORT
 		#define _DLL_API __declspec(dllexport) 
     #else
 		#define _DLL_API __declspec(dllimport) 
     #endif //_ACQDEFS_H
+	#else
+		#define _DLL_API 
+	#endif // USE_XISL_AS_STATIC_LIB
 
     #define HIS_RETURN _DLL_API UINT WINAPI
 	#define DEX_RETURN _DLL_API UINT WINAPI
@@ -352,7 +356,8 @@ typedef enum {
 	XRpad_SYSTEM_CONTROL_RESTART_NETWORK = 1,  //!<  restart XRpad Network 
 	XRpad_SYSTEM_CONTROL_SHUTDOWN = 2,         //!<  shutdown XRpad
 	XRpad_SYSTEM_CONTROL_SET_DEEP_SLEEP = 3,   //!<  power down analog circuitry and sensor FPGA
-	XRpad_SYSTEM_CONTROL_SET_IDLE = 4          //!<  power up analog circuitry and sensor FPGA
+	XRpad_SYSTEM_CONTROL_SET_IDLE = 4,         //!<  power up analog circuitry and sensor FPGA
+	XRpad_SYSTEM_CONTROL_RESTART_WLAN=9        //!<  restart XRpad2 WLAN only
 } XRpad_SystemControlEnum;
 
 
@@ -496,6 +501,7 @@ typedef enum XRpad_DataInterfaceControlEnum{
 } XRpad_DataInterfaceControlEnum;
 
 
+
 /**
 * @ingroup enum
 */
@@ -556,20 +562,25 @@ typedef struct XislFileInfo
 
 /**
 * @ingroup enum
+*
+* @brief
+* enum used for addressing XRpad2 on board correction stages.
 */
 typedef enum ProcScriptOperation
 {
-	PREBINNING,
-	PREMEAN,
-	PRESTOREBUFFER,
-	OFFSET,
-	GAIN,
-	MEAN,
-	PREVIEW,
-	BINNING,
-	STOREBUFFER,
-	STORESD,
-	SEND
+    PREBINNING,         ///< reserved. don not use!
+    PREMEAN,            ///< reserved. don not use!
+    PRESTOREBUFFER,     ///< reserved. don not use!
+    OFFSET,             ///< offset correction
+    GAIN,               ///< gain correction (do not use in dual enmergy mode!)
+    MEAN,               ///< pixel correction
+    PREVIEW,            ///< reserved. don not use!
+    BINNING,            ///< reserved. don not use!
+    STOREBUFFER,        ///< reserved. don not use!
+    STORESD,            ///< reserved. don not use!
+    SEND,               ///< reserved. don not use!
+    OFFSET_2,           ///< offset correction of second bright image in dual energy mode
+    GAIN_2              ///< reserved. don not use!
 } ProcScriptOperation;
 
 /**
@@ -711,6 +722,35 @@ typedef enum XIS_Xrpd_Event
 
 
 typedef void (*XIS_EventCallback)(XIS_Event, UINT, UINT, void *, void *);
+
+
+/**
+ * @ingroup enum
+ */
+typedef enum XIS_Init_Flags
+{
+    XIF_XISL                            = 0x00000001, //!< Initialize libXISL
+    XIF_GBIF                            = 0x00000002, //!< Initialize libgbif
+    XIF_WPE200                          = 0x00000004, //!< Initialize libwpe200 (currently not used)
+    XIF_CURL                            = 0x00000008, //!< Initialize libcurl
+    // ... to be continued ...
+    XIF_ALL                             = 0xFFFFFFFF  //!< Initialize everything
+} XIS_Init_Flags;
+
+
+
+/**
+ * @ingroup enum
+ * @brief   Transmission modes.
+ * @note    Not all devices support each mode.
+ *          Only XTM_LIVE is supported by all devices.
+ */
+typedef enum XIS_Transmission_Mode {
+    XTM_LIVE                            = 0x00000001, //!< All images are sent out directly as they are acquired
+    XTM_SAFE                            = 0x00000002  //!< Images are sent out when the previous was completely received
+} XIS_Transmission_Mode;
+
+
 
 // wpe library includes
 /* Error codes */
@@ -886,6 +926,9 @@ struct networkConfiguration
 #endif // _DLL_EXPORT
 // wpe library includes end
 
+HIS_RETURN Acquisition_Global_Init(XIS_Init_Flags flags);
+HIS_RETURN Acquisition_Global_Cleanup(void);
+
 HIS_RETURN Acquisition_Init(HACQDESC *phAcqDesc,
 					  DWORD dwChannelType, int nChannelNr,
 					  BOOL bEnableIRQ, 
@@ -999,10 +1042,6 @@ HIS_RETURN Acquisition_GbIF_GetDeviceList(GBIF_DEVICE_PARAM* pGBIF_DEVICE_PARAM,
 HIS_RETURN Acquisition_GbIF_GetDevice(GBIF_STRING_DATATYPE* ucAddress, DWORD dwAddressType, GBIF_DEVICE_PARAM* pDevice);
 HIS_RETURN Acquisition_GbIF_GetDeviceCnt(long* plNrOfboards);
 
-//HIS_RETURN Acquisition_GbIF_UploadPKIFirmware(			GBIF_STRING_DATATYPE* cMacAddress,
-//													void* pBitStream, long lBitStreamLength
-//										);
-
 HIS_RETURN Acquisition_GbIF_SetConnectionSettings(	GBIF_STRING_DATATYPE* cMAC,
 													unsigned long ulBootOptions,
 													GBIF_STRING_DATATYPE* cDefIP,
@@ -1065,6 +1104,8 @@ HIS_RETURN Acquisition_DeleteFile(XislFileHandle fileHandle);
 HIS_RETURN Acquisition_CloseFile(XislFileHandle fileHandle);
 
 HIS_RETURN Acq_wpe_LoadCorrectionImageToBuffer(HACQDESC hAcqDesc, const char* pccCorrectionFilePath, ProcScriptOperation Operation);
+HIS_RETURN Acq_wpe_DualEnergy_LoadCorrectionImageToBuffer(HACQDESC hAcqDesc, const char* pccCorrectionFilePath, const ProcScriptOperation Operation);
+
 
 HIS_RETURN Acquisition_AcknowledgeImage(HACQDESC hAcqDesc, const char *tag);
 
@@ -1073,6 +1114,8 @@ HIS_RETURN Acquisition_wpe_SetUniqueImageTag(HACQDESC hAcqDesc, const char * ima
 HIS_RETURN Acquisition_Reset_OnboardOptions(HACQDESC hAcqDesc);
 HIS_RETURN Acquisition_Set_OnboardOptionsPostOffset(HACQDESC hAcqDesc, BOOL bNoOnboardCorr, BOOL bSendPreviewFrist, BOOL bSendFULLFirst, BOOL bEnableAckFirst, BOOL bEnableAckSecond, BOOL bEnableOffsetFirst, BOOL bEnablePostOffsetCorr, BOOL bGain, BOOL bPixel);
 HIS_RETURN Acquisition_Set_OnboardOptionsPostOffsetEx(HACQDESC hAcqDesc, BOOL bNoOnboardCorr, BOOL bSendPreviewFrist, BOOL bSendFULLFirst, BOOL bEnableAckFirst, BOOL bEnableAckSecond, BOOL bEnableOffsetFirst, BOOL bEnablePostOffsetCorr, BOOL bGain, BOOL bPixel, BOOL bStoreOffsetToSD);
+HIS_RETURN Acquisition_Set_OnboardOptionsDualEnergy(HACQDESC hAcqDesc, BOOL bEnablePreviewFirst, BOOL bEnablePreviewSecond, BOOL bEnablePreviewOffset, BOOL bEnableOffset, BOOL bOnboardPxlCorr, BOOL bEnableAckFirst, BOOL bEnableFirst, BOOL bEnableAckSecond, BOOL bEnableSecond, BOOL bEnableAckThird, BOOL bEnableAckFourth, OnboardBinningMode ePreviewBinningMode);
+
 
 HIS_RETURN Acquisition_wpe_SetMaxOnboardCorrValue(HACQDESC hAcqDesc, unsigned short usMax, unsigned short usReplace);
 
@@ -1129,6 +1172,7 @@ HIS_RETURN Acquisition_GetProvidedEnhancedFeatures(HACQDESC hAcqDesc, unsigned i
 HIS_RETURN Acquisition_Set_OnboardOptionPreview(HACQDESC hAcqDesc, BOOL bEnablePreview, BOOL bPreviewOptionSendFull, OnboardBinningMode eMode, unsigned int uiSelectedScript);
 HIS_RETURN Acquisition_IsPreviewImage(HACQDESC hAcqDesc, unsigned int* uiIsPreview);
 HIS_RETURN Acquisition_SetPhototimedParams(HACQDESC hAcqDesc, unsigned short usNrOfScrubs, unsigned short usMaxDelay);
+HIS_RETURN Acquisition_SetDualEnergyParams(HACQDESC hAcqDesc, unsigned short usNrOfScrubs, unsigned short usMaxDelay);
 
 HIS_RETURN Acquisition_EnableLogging(BOOL onOff);
 HIS_RETURN Acquisition_SetLogLevel(XislLoggingLevels xislLogLvl);
@@ -1207,8 +1251,13 @@ HIS_RETURN Acquisition_DisableSyslogSaving(HACQDESC hAcqDesc);
 HIS_RETURN Acquisition_SetAEDOptions(HACQDESC hAcqDesc, unsigned short usMode, unsigned short usOffsetImageDelay, unsigned short usSelectReadoutSection);
 HIS_RETURN Acquisition_GetAutoDeepSleepIdleLocations(HACQDESC hAcqDesc, unsigned int *autoDeepSleepLocations, unsigned int *autoIdleLocations);
 HIS_RETURN Acquisition_SetAutoDeepSleepIdleLocations(HACQDESC hAcqDesc, unsigned int autoDeepSleepLocations, unsigned int autoIdleLocations);
+HIS_RETURN Acquisition_GbIF_SetTransmissionMode(HACQDESC hAcqDesc, XIS_Transmission_Mode transmissionMode);
+HIS_RETURN Acquisition_GbIF_GetTransmissionMode(HACQDESC hAcqDesc, XIS_Transmission_Mode *pTransmissionMode);
 
+HIS_RETURN Acquisition_SetDefaultBootConfiguration(HACQDESC hAcqDesc, int default_boot_cfg);
+HIS_RETURN Acquisition_GetDefaultBootConfiguration(HACQDESC hAcqDesc, int* default_boot_cfg);
 
+HIS_RETURN Acquisition_xrpd_GetDetectorType(HACQDESC hAcqDesc, char* response_buffer, size_t response_buffer_len);
 
 #ifdef __cplusplus
 }
@@ -1503,6 +1552,30 @@ HIS_RETURN Acquisition_SetAutoDeepSleepIdleLocations(HACQDESC hAcqDesc, unsigned
 #define HIS_ERROR_XRPD_SET_EPC_REGISTER              162
 /** unable to communicate with battery. @ingroup enum **/
 #define HIS_ERROR_XRPD_BATTERY_COM                   163
+/** WSAStartup or WSACleanup failed. @ingroup enum **/
+#define HIS_ERROR_WSA                                164
+/** Function is not supported by your device or setup. @ingroup enum **/
+#define HIS_ERROR_NOT_SUPPORTED                      165
+/** Failed to enable live transmission mode. @ingroup enum **/
+#define HIS_ERROR_TRANSMISSION_MODE                  166
+/** The configuration/function call is conflicting with another option. @ingroup enum **/
+#define HIS_ERROR_CONFLICT                           167
+/** WLAN Restart failed. @ingroup enum **/
+#define HIS_ERROR_WLAN_RESTART                       168
+/** Unable to set event callback. Could be caused by multiple threads running the function in parallel. @ingroup enum **/
+#define HIS_ERROR_SET_EVENT_CALLBACK                 169
+/** Error getting default boot configuration @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_DEF_BOOT_CFG              170
+/** Error setting default boot configuration @ingroup enum **/
+#define HIS_ERROR_XRPD_SET_DEF_BOOT_CFG              171
+/** Resetting the Zynq FPGA failed @ingroup enum **/
+#define HIS_ERROR_RESET_ZYNQ                         172
+/** Error getting the detector type @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_DET_TYPE                  174
+/** Error getting the detector options @ingroup enum **/
+#define HIS_ERROR_XRPD_GET_DET_OPTIONS               175
+/** Error initializing the detector options data @ingroup enum **/
+#define HIS_ERROR_INIT_DET_OPTIONS                   176
 
 //sort definitions
 
@@ -1569,73 +1642,6 @@ HIS_RETURN Acquisition_SetAutoDeepSleepIdleLocations(HACQDESC hAcqDesc, unsigned
 
 
 #define HIS_MAX_TIMINGS							0x8
-
-
-/// detector supported options
-#define XIS_DETECTOR_SERVICE_MODE_AVAILABLE		0x1 
-#define XIS_DETECTOR_TRIGGER_SOURCE_SELECTABLE	0x2
-#define XIS_DETECTOR_SUPPORTS_PING				0x3
-#define XIS_DETECTOR_SUPPORTED_ROI_MODES		0x4
-#define XIS_DETECTOR_SUPPORTED_BINNING_MODES	0x5
-#define XIS_DETECTOR_SUPPORTS_GAIN_CHANGE		0x6
-#define XIS_DETECTOR_SUPPORTS_MULTIPLE_TRIGGER_MODES	0x7
-#define XIS_DETECTOR_SUPPORTS_CONFIGURABLE_TRIGGER_OUT	0x8
-#define XIS_DETECTOR_GRPSIZE_ROI_Y				0x9
-#define XIS_DETECTOR_LIVEBUFFERSIZE				0xA
-#define XIS_DETECTOR_CMD_EXECUTION_DELAY		0xB
-#define XIS_DETECTOR_AUTO_TRIGGER_SELECTABLE	0xC
-#define XIS_DETECTOR_SUPPORTED_FOV_MODES		0xD
-#define XIS_DETECTOR_SUPPORTS_EXAM_FLAG			0xE
-#define XIS_DETECTOR_SUPPORTS_IMAGE_TAG			0xF
-#define XIS_DETECTOR_SUPPORTS_PROC_SCRIPT		0x10
-#define XIS_DETECTOR_SUPPORTS_ENHANCED_FEATURES	0x11
-#define XIS_DETECTOR_SUPPORTS_EMI				0x12
-#define XIS_DETECTOR_SUPPORTS_AED_MODE_CHANGE   0x13 // Detector provides AED with post offset, delay and section selection
-
-//Grps 1&2&3&4, 3&4, 2&3, 1&2 ,4, 3, 2, 1
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_1			0x1
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_2			0x2
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_3			0x4
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_4			0x8
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_5			0x10 // val 2011-11-14 1642
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_6			0x20 // val 2011-11-14 1642
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_7			0x40 // val 2011-11-14 1642
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_8			0x80 // val 2011-11-14 1642
-
-#define XIS_DETECTOR_PROVIDES_ROI_1_GRP			0x1
-#define XIS_DETECTOR_PROVIDES_ROI_2_GRPS		0x2
-#define XIS_DETECTOR_PROVIDES_ROI_3_GRPS		0x4
-#define XIS_DETECTOR_PROVIDES_ROI_4_GRPS		0x8
-#define XIS_DETECTOR_PROVIDES_ROI_ALL_GRPS		0x1000
-
-#define XIS_DETECTOR_PROVIDES_FOV_1				0x10	// 2013-07-03 val R&F Field Of View
-#define XIS_DETECTOR_PROVIDES_FOV_2				0x20	// 2013-07-03 val R&F Field Of View 2
-#define XIS_DETECTOR_PROVIDES_FOV_3				0x40	// 2013-07-03 val R&F Field Of View 3
-#define XIS_DETECTOR_PROVIDES_FOV_4				0x80	// 2013-07-03 val R&F Field Of View 4
-#define XIS_DETECTOR_PROVIDES_FOV_5				0x100	// 2013-07-03 val R&F Field Of View 5
-
-
-/*
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_1_2		0x10
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_2_3		0x20
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_3_4		0x40
-#define XIS_DETECTOR_PROVIDES_ROI_GRP_1_2_3_4	0x80
-*/
-// BINNING MODES
-#define XIS_DETECTOR_PROVIDES_BINNING_1x1		0x1
-#define XIS_DETECTOR_PROVIDES_BINNING_2x2		0x2
-#define XIS_DETECTOR_PROVIDES_BINNING_4x4		0x4
-#define XIS_DETECTOR_PROVIDES_BINNING_1x2		0x8
-#define XIS_DETECTOR_PROVIDES_BINNING_1x4		0x10
-#define XIS_DETECTOR_PROVIDES_BINNING_3x3		0x20
-#define XIS_DETECTOR_PROVIDES_BINNING_9to4		0x40
-
-#define XIS_DETECTOR_PROVIDES_BINNING_AVG		0x100
-#define XIS_DETECTOR_PROVIDES_BINNING_SUM		0x200
-// AVG bit 8
-// SUM bit 9
-
-
 
 
 #endif	//_ACQUISITION_H
