@@ -103,7 +103,7 @@ extern "C" int PerkinElmerConfig(const char *portName, int IDType, const char *I
 PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
                          int maxBuffers, size_t maxMemory, int priority, int stackSize)
 
-    : ADDriver(portName, 1, (int)NUM_PERKIN_ELMER_PARAMS, maxBuffers, maxMemory, 0, 0, ASYN_CANBLOCK, 1, priority, stackSize)
+    : ADDriver(portName, 1, 0, maxBuffers, maxMemory, 0, 0, ASYN_CANBLOCK, 1, priority, stackSize)
 {
   int status = asynSuccess;
   char versionString[20];
@@ -147,6 +147,14 @@ PerkinElmer::PerkinElmer(const char *portName,  int IDType, const char *IDValue,
   createParam(PE_ImageNumberString,                 asynParamInt32,   &PE_ImageNumber);
   createParam(PE_SkipFramesString,                  asynParamInt32,   &PE_SkipFrames);
   createParam(PE_NumFramesToSkipString,             asynParamInt32,   &PE_NumFramesToSkip);
+  createParam(PE_TriggerOutSignalString,            asynParamInt32,   &PE_TriggerOutSignal);
+  createParam(PE_TriggerOutEPLengthString,          asynParamInt32,   &PE_TriggerOutEPLength);
+  createParam(PE_TriggerOutEPFirstFrameString,      asynParamInt32,   &PE_TriggerOutEPFirstFrame);
+  createParam(PE_TriggerOutEPLastFrameString,       asynParamInt32,   &PE_TriggerOutEPLastFrame);
+  createParam(PE_TriggerOutEPDelay1String,          asynParamInt32,   &PE_TriggerOutEPDelay1);
+  createParam(PE_TriggerOutEPDelay2String,          asynParamInt32,   &PE_TriggerOutEPDelay2);
+  createParam(PE_TriggerOutDDDDelayString,          asynParamInt32,   &PE_TriggerOutDDDDelay);
+  createParam(PE_TriggerOutEdgeString,              asynParamInt32,   &PE_TriggerOutEdge);
 
   /* Set some default values for parameters */
   status =  setStringParam (ADManufacturer, "Perkin Elmer");
@@ -1127,6 +1135,16 @@ asynStatus PerkinElmer::writeInt32(asynUser *pasynUser, epicsInt32 value)
   else if (function == PE_LoadPixelCorrectionFile) {
     loadPixelCorrectionFile();
   }
+  else if ((function == PE_TriggerOutSignal)       ||
+           (function == PE_TriggerOutEPLength)     ||
+           (function == PE_TriggerOutEPFirstFrame) ||
+           (function == PE_TriggerOutEPLastFrame)  ||
+           (function == PE_TriggerOutEPDelay1)     ||
+           (function == PE_TriggerOutEPDelay2)     ||
+           (function == PE_TriggerOutDDDDelay)     ||
+           (function == PE_TriggerOutEdge)) {
+    setTriggerOut();
+  }
 
   else {
     /* If this parameter belongs to a base class call its method */
@@ -1265,6 +1283,44 @@ void PerkinElmer::acquireSetup(void)
   doSoftwareTriggers_ = (((syncMode == PE_SYNC_DDD_CLEAR) || 
                           (syncMode == PE_SYNC_DDD_NOCLEAR)) &&
                          (triggerMode == PE_INTERNAL_TRIGGER));
+}
+
+asynStatus PerkinElmer::setTriggerOut()
+{
+  unsigned int uiPEResult;
+  int triggerOutSignal;
+  int triggerOutEPLength;
+  int triggerOutEPFirstFrame;
+  int triggerOutEPLastFrame;
+  int triggerOutEPDelay1;
+  int triggerOutEPDelay2;
+  int triggerOutDDDDelay;
+  int triggerOutEdge;
+  int triggerOutSaveAsDefault=0;
+  static const char *functionName = "setTriggerOut";
+
+  getIntegerParam(PE_TriggerOutSignal,       &triggerOutSignal);
+  getIntegerParam(PE_TriggerOutEPLength,     &triggerOutEPLength);
+  getIntegerParam(PE_TriggerOutEPFirstFrame, &triggerOutEPFirstFrame);
+  getIntegerParam(PE_TriggerOutEPLastFrame,  &triggerOutEPLastFrame);
+  getIntegerParam(PE_TriggerOutEPDelay1,     &triggerOutEPDelay1);
+  getIntegerParam(PE_TriggerOutEPDelay2,     &triggerOutEPDelay2);
+  getIntegerParam(PE_TriggerOutDDDDelay,     &triggerOutDDDDelay);
+  getIntegerParam(PE_TriggerOutEdge,         &triggerOutEdge);
+
+  uiPEResult = Acquisition_SetTriggerOutSignalOptions(hAcqDesc_, triggerOutSignal, triggerOutEPLength, 
+                                                      triggerOutEPFirstFrame, triggerOutEPLastFrame,
+                                                      triggerOutEPDelay1, triggerOutEPDelay2,
+                                                      triggerOutDDDDelay, triggerOutEdge, triggerOutSaveAsDefault);
+  reportXISStatus(uiPEResult, functionName, "Acquisition_SetTriggerOutSignalOptions(hAcqDesc_=%p, triggerOutSignal=%d, triggerOutEPLength=%d\n"
+                                            "triggerOutEPFirstFrame=%d, triggerOutEPLastFrame=%d\n"
+                                            "triggerOutEPDelay1=%d, triggerOutEPDelay2=%d\n"
+                                            "triggerOutDDDDelay=%d, triggerOutEdge=%d, triggerOutSaveADefault=%d\n",
+                                            hAcqDesc_, triggerOutSignal, triggerOutEPLength, 
+                                            triggerOutEPFirstFrame, triggerOutEPLastFrame,
+                                            triggerOutEPDelay1, triggerOutEPDelay2,
+                                            triggerOutDDDDelay, triggerOutEdge, triggerOutSaveAsDefault);
+  return asynSuccess;
 }
 
 void PerkinElmer::doSoftwareTrigger()
@@ -1756,7 +1812,7 @@ void PerkinElmer::reportXISStatus(int returnCode, const char *functionName, cons
 {
   va_list argp;
   int traceMask;
-  char tempString[256];
+  char tempString[2048];
 
   traceMask = pasynTrace->getTraceMask(pasynUserSelf);
   va_start(argp, formatString);

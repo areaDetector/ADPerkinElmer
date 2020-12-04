@@ -121,7 +121,14 @@ protected:
   int PE_ImageNumber;
   int PE_SkipFrames;
   int PE_NumFramesToSkip;
-  #define PE_LAST_PARAM PE_NumFramesToSkip
+  int PE_TriggerOutSignal;
+  int PE_TriggerOutEPLength;
+  int PE_TriggerOutEPFirstFrame;
+  int PE_TriggerOutEPLastFrame;
+  int PE_TriggerOutEPDelay1;
+  int PE_TriggerOutEPDelay2;
+  int PE_TriggerOutDDDDelay;
+  int PE_TriggerOutEdge;
 
 
 private:
@@ -173,6 +180,7 @@ private:
   asynStatus loadGainFile(void);
   asynStatus saveGainFile(void);
   asynStatus loadPixelCorrectionFile();
+  asynStatus setTriggerOut();
 
   void reportXISStatus(int errorCode, const char *functionName, const char *formatString, ...);
 
@@ -208,8 +216,15 @@ private:
 #define PE_ImageNumberString                "PE_IMAGE_NUMBER"
 #define PE_SkipFramesString                 "PE_SKIP_FRAMES"
 #define PE_NumFramesToSkipString            "PE_NUM_FRAMES_TO_SKIP"
+#define PE_TriggerOutSignalString           "PE_TRIGGER_OUT_SIGNAL"
+#define PE_TriggerOutEPLengthString         "PE_TRIGGER_OUT_EP_LENGTH"
+#define PE_TriggerOutEPFirstFrameString     "PE_TRIGGER_OUT_EP_FIRST_FRAME"
+#define PE_TriggerOutEPLastFrameString      "PE_TRIGGER_OUT_EP_LAST_FRAME"
+#define PE_TriggerOutEPDelay1String         "PE_TRIGGER_OUT_EP_DELAY1"
+#define PE_TriggerOutEPDelay2String         "PE_TRIGGER_OUT_EP_DELAY2"
+#define PE_TriggerOutDDDDelayString         "PE_TRIGGER_OUT_DDD_DELAY"
+#define PE_TriggerOutEdgeString             "PE_TRIGGER_OUT_EDGE"
 
-#define NUM_PERKIN_ELMER_PARAMS ((int)(&PE_LAST_PARAM - &PE_FIRST_PARAM + 1))
 //______________________________________________________________________________________________
 
 #endif
