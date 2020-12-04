@@ -1,6 +1,6 @@
 
 file {
-	name="/home/epics/devel/areaDetector-3-3-1/ADPerkinElmer/perkinElmerApp/op/adl/PerkinElmer.adl"
+	name="/home/epics/devel/areaDetector-3-10/ADPerkinElmer/perkinElmerApp/op/adl/PerkinElmer.adl"
 	version=030109
 }
 display {
@@ -8,7 +8,7 @@ display {
 		x=211
 		y=85
 		width=1070
-		height=810
+		height=910
 	}
 	clr=14
 	bclr=4
@@ -113,8 +113,8 @@ text {
 }
 composite {
 	object {
-		x=360
-		y=675
+		x=715
+		y=720
 		width=350
 		height=110
 	}
@@ -686,154 +686,6 @@ text {
 	}
 	monitor {
 		chan="$(P)$(R)PEOffsetConstant_RBV"
-		clr=54
-		bclr=4
-	}
-	limits {
-	}
-}
-rectangle {
-	object {
-		x=359
-		y=540
-		width=350
-		height=130
-	}
-	"basic attribute" {
-		clr=14
-		fill="outline"
-	}
-}
-rectangle {
-	object {
-		x=482
-		y=542
-		width=105
-		height=21
-	}
-	"basic attribute" {
-		clr=2
-	}
-}
-text {
-	object {
-		x=509
-		y=543
-		width=50
-		height=20
-	}
-	"basic attribute" {
-		clr=54
-	}
-	textix="Setup"
-	align="horiz. centered"
-}
-"message button" {
-	object {
-		x=476
-		y=645
-		width=100
-		height=20
-	}
-	control {
-		chan="$(P)$(R)PEInitialize"
-		clr=14
-		bclr=51
-	}
-	label="Initialize"
-	press_msg="1"
-}
-text {
-	object {
-		x=397
-		y=570
-		width=150
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="# Frame Buffers"
-}
-"text entry" {
-	object {
-		x=556
-		y=570
-		width=60
-		height=20
-	}
-	control {
-		chan="$(P)$(R)PENumFrameBuffers"
-		clr=14
-		bclr=51
-	}
-	limits {
-	}
-}
-"text update" {
-	object {
-		x=623
-		y=571
-		width=61
-		height=18
-	}
-	monitor {
-		chan="$(P)$(R)PENumFrameBuffers_RBV"
-		clr=54
-		bclr=4
-	}
-	align="horiz. centered"
-	limits {
-	}
-}
-text {
-	object {
-		x=367
-		y=595
-		width=180
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Frame buffer index"
-}
-"text update" {
-	object {
-		x=556
-		y=596
-		width=130
-		height=18
-	}
-	monitor {
-		chan="$(P)$(R)PEFrameBuffIndex"
-		clr=54
-		bclr=4
-	}
-	limits {
-	}
-}
-text {
-	object {
-		x=427
-		y=620
-		width=120
-		height=20
-	}
-	"basic attribute" {
-		clr=14
-	}
-	textix="Image Number"
-}
-"text update" {
-	object {
-		x=556
-		y=621
-		width=130
-		height=18
-	}
-	monitor {
-		chan="$(P)$(R)PEImageNumber"
 		clr=54
 		bclr=4
 	}
@@ -1829,6 +1681,402 @@ text {
 	}
 	clrmod="alarm"
 	format="string"
+	limits {
+	}
+}
+rectangle {
+	object {
+		x=359
+		y=540
+		width=350
+		height=130
+	}
+	"basic attribute" {
+		clr=14
+		fill="outline"
+	}
+}
+rectangle {
+	object {
+		x=482
+		y=542
+		width=105
+		height=21
+	}
+	"basic attribute" {
+		clr=2
+	}
+}
+text {
+	object {
+		x=509
+		y=543
+		width=50
+		height=20
+	}
+	"basic attribute" {
+		clr=54
+	}
+	textix="Setup"
+	align="horiz. centered"
+}
+"message button" {
+	object {
+		x=476
+		y=645
+		width=100
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PEInitialize"
+		clr=14
+		bclr=51
+	}
+	label="Initialize"
+	press_msg="1"
+}
+text {
+	object {
+		x=397
+		y=570
+		width=150
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="# Frame buffers"
+}
+"text entry" {
+	object {
+		x=556
+		y=570
+		width=60
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PENumFrameBuffers"
+		clr=14
+		bclr=51
+	}
+	limits {
+	}
+}
+"text update" {
+	object {
+		x=623
+		y=571
+		width=61
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)PENumFrameBuffers_RBV"
+		clr=54
+		bclr=4
+	}
+	align="horiz. centered"
+	limits {
+	}
+}
+text {
+	object {
+		x=367
+		y=595
+		width=180
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Frame buffer index"
+}
+"text update" {
+	object {
+		x=556
+		y=596
+		width=130
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)PEFrameBuffIndex"
+		clr=54
+		bclr=4
+	}
+	limits {
+	}
+}
+text {
+	object {
+		x=427
+		y=620
+		width=120
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Image number"
+}
+"text update" {
+	object {
+		x=556
+		y=621
+		width=130
+		height=18
+	}
+	monitor {
+		chan="$(P)$(R)PEImageNumber"
+		clr=54
+		bclr=4
+	}
+	limits {
+	}
+}
+rectangle {
+	object {
+		x=360
+		y=675
+		width=350
+		height=230
+	}
+	"basic attribute" {
+		clr=14
+		fill="outline"
+	}
+}
+rectangle {
+	object {
+		x=475
+		y=677
+		width=120
+		height=21
+	}
+	"basic attribute" {
+		clr=2
+	}
+}
+text {
+	object {
+		x=487
+		y=705
+		width=60
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Signal"
+}
+text {
+	object {
+		x=480
+		y=678
+		width=110
+		height=20
+	}
+	"basic attribute" {
+		clr=54
+	}
+	textix="Trigger Out"
+	align="horiz. centered"
+}
+menu {
+	object {
+		x=557
+		y=706
+		width=120
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PETrigOutSignal"
+		clr=14
+		bclr=51
+	}
+}
+text {
+	object {
+		x=407
+		y=755
+		width=140
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="EP first frame"
+}
+text {
+	object {
+		x=417
+		y=780
+		width=130
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="EP last frame"
+}
+text {
+	object {
+		x=437
+		y=805
+		width=110
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="EP delay #1"
+}
+text {
+	object {
+		x=437
+		y=830
+		width=110
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="EP delay #2"
+}
+text {
+	object {
+		x=457
+		y=855
+		width=90
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="DDD delay"
+}
+text {
+	object {
+		x=507
+		y=880
+		width=40
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="Edge"
+}
+text {
+	object {
+		x=457
+		y=730
+		width=90
+		height=20
+	}
+	"basic attribute" {
+		clr=14
+	}
+	textix="EP length"
+}
+menu {
+	object {
+		x=557
+		y=880
+		width=120
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PETrigOutEdge"
+		clr=14
+		bclr=51
+	}
+}
+"text entry" {
+	object {
+		x=557
+		y=730
+		width=120
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PETrigOutEPLength"
+		clr=14
+		bclr=51
+	}
+	limits {
+	}
+}
+"text entry" {
+	object {
+		x=557
+		y=755
+		width=120
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PETrigOutEPFirstFrame"
+		clr=14
+		bclr=51
+	}
+	limits {
+	}
+}
+"text entry" {
+	object {
+		x=557
+		y=780
+		width=120
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PETrigOutEPLastFrame"
+		clr=14
+		bclr=51
+	}
+	limits {
+	}
+}
+"text entry" {
+	object {
+		x=557
+		y=805
+		width=120
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PETrigOutEPDelay1"
+		clr=14
+		bclr=51
+	}
+	limits {
+	}
+}
+"text entry" {
+	object {
+		x=557
+		y=830
+		width=120
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PETrigOutEPDelay2"
+		clr=14
+		bclr=51
+	}
+	limits {
+	}
+}
+"text entry" {
+	object {
+		x=557
+		y=855
+		width=120
+		height=20
+	}
+	control {
+		chan="$(P)$(R)PETrigOutDDDDelay"
+		clr=14
+		bclr=51
+	}
 	limits {
 	}
 }
