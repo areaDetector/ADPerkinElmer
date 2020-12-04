@@ -386,3 +386,161 @@ record(longin, "$(P)$(R)PENumFramesToSkip_RBV")
    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_NUM_FRAMES_TO_SKIP")
    field(SCAN, "I/O Intr")
 }
+
+# TriggerOut records
+record(mbbo, "$(P)$(R)PETrigOutSignal")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_SIGNAL")
+   field(ZRVL, "0")
+   field(ZRST, "FRM_EN_PWM")
+   field(ONVL, "1")
+   field(ONST, "FRM_EN_PWM_INV")
+   field(TWVL, "2")
+   field(TWST, "EP")
+   field(THVL, "3")
+   field(THST, "EP_INV")
+   field(FRVL, "4")
+   field(FRST, "DDD_PULSE")
+   field(FVVL, "5")
+   field(FVST, "DDD_PULSE_INV")
+   field(SXVL, "6")
+   field(SXST, "GND")
+   field(SVVL, "7")
+   field(SVST, "VCC")
+   field(VAL,  "0")
+}
+
+record(mbbi, "$(P)$(R)PETrigOutSignal_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_SIGNAL")
+   field(ZRVL, "0")
+   field(ZRST, "FRM_EN_PWM")
+   field(ONVL, "1")
+   field(ONST, "FRM_EN_PWM_INV")
+   field(TWVL, "2")
+   field(TWST, "EP")
+   field(THVL, "3")
+   field(THST, "EP_INV")
+   field(FRVL, "4")
+   field(FRST, "DDD_PULSE")
+   field(FVVL, "5")
+   field(FVST, "DDD_PULSE_INV")
+   field(SXVL, "6")
+   field(SXST, "GND")
+   field(SVVL, "7")
+   field(SVST, "VCC")
+   field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)PETrigOutEPLength")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_LENGTH")
+}
+
+record(longin, "$(P)$(R)PETrigOutEPLength_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_LENGTH")
+   field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)PETrigOutEPFirstFrame")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_FIRST_FRAME")
+}
+
+record(longin, "$(P)$(R)PETrigOutEPFirstFrame_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_FIRST_FRAME")
+   field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)PETrigOutEPLastFrame")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_LAST_FRAME")
+}
+
+record(longin, "$(P)$(R)PETrigOutEPLastFrame_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_LAST_FRAME")
+   field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)PETrigOutEPDelay1")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(EGU,  "microseconds")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_DELAY1")
+}
+
+record(longin, "$(P)$(R)PETrigOutEPDelay1_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(EGU,  "microseconds")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_DELAY1")
+   field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)PETrigOutEPDelay2")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(EGU,  "microseconds")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_DELAY2")
+}
+
+record(longin, "$(P)$(R)PETrigOutEPDelay2_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(EGU,  "microseconds")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EP_DELAY2")
+   field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)PETrigOutDDDDelay")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(EGU,  "microseconds")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_DDD_DELAY")
+}
+
+record(longin, "$(P)$(R)PETrigOutDDDDelay_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(EGU,  "microseconds")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_DDD_DELAY")
+   field(SCAN, "I/O Intr")
+}
+
+record(bo, "$(P)$(R)PETrigOutEdge")
+{
+   field(PINI, "YES")
+   field(DTYP, "asynInt32")
+   field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EDGE")
+   field(ZNAM, "Falling")
+   field(ONAM, "Rising")
+}
+
+record(bi, "$(P)$(R)PETrigOutEdge_RBV")
+{
+   field(DTYP, "asynInt32")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))PE_TRIGGER_OUT_EDGE")
+   field(SCAN, "I/O Intr")
+   field(ZNAM, "Falling")
+   field(ONAM, "Rising")
+}
+
+

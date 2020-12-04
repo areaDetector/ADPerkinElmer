@@ -13,3 +13,11 @@ $(P)$(R)PESkipFrames
 $(P)$(R)PENumFramesToSkip
 $(P)$(R)PENumFrameBuffers
 $(P)$(R)PESyncMode
+$(P)$(R)PETrigOutSignal
+$(P)$(R)PETrigEPLength
+$(P)$(R)PETrigEPFirstFrame
+$(P)$(R)PETrigEPLastFrame
+$(P)$(R)PETrigEPDelay1
+$(P)$(R)PETrigEPDelay2
+$(P)$(R)PETrigDDDDelay
+$(P)$(R)PETrigEdge
