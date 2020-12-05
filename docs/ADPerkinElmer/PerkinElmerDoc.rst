@@ -224,6 +224,44 @@ to those in asynNDArrayDriver.h and ADDriver.h.
       if PESkipFrames=1.
     - PENumFramesToSkip, PENumFramesToSkip_RBV
     - longout, longin
+  * -
+    - **Trigger output control**
+  * - Controls which signal appears on the trigger output connector.  Choices are:
+
+      0) FRM_EN_PWM
+      1) FRM_EN_PWM_INV
+      2) EP
+      3) EP_INV
+      4) DDD_PULSE
+      5) DDD_PULSE_INV
+      6) GND
+      7) VCC
+    - PETrigOutSignal, PETrigOutSignal_RBV
+    - mbbo, mbbi
+  * - Trigger output EP length
+    - PETrigOutEPLength, PETrigOutEPLength_RBV
+    - longout, longin
+  * - Trigger output EP first frame
+    - PETrigOutEPFirstFrame, PETrigOutEPFirstFrame_RBV
+    - longout, longin
+  * - Trigger output EP last frame
+    - PETrigOutEPLastFrame, PETrigOutEPLastFrame_RBV
+    - longout, longin
+  * - Trigger output EP delay 1
+    - PETrigOutEPDelay1, PETrigOutEPDelay1_RBV
+    - longout, longin
+  * - Trigger output EP delay 2
+    - PETrigOutEPDelay2, PETrigOutEPDelay2_RBV
+    - longout, longin
+  * - Trigger output DDD delay
+    - PETrigOutDDDDelay, PETrigOutDDDDelay_RBV
+    - longout, longin
+  * - Trigger output edge.  Choices are:
+
+      0) Falling
+      1) Rising
+    - PETrigOutEdge, PETrigOutEdge_RBV
+    - mbbo, mbbi
 
 Unsupported standard driver parameters
 --------------------------------------
