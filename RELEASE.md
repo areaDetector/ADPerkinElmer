@@ -22,6 +22,18 @@ files respectively, in the configure/ directory of the appropriate release of th
 
 Release Notes
 =============
+R2-11 (XXX-December-2020)
+----
+* Added new records to control trigger output signal
+  - PETrigOutSignal
+  - PETrigOutEPLength
+  - PETrigOutEPFirstFrame
+  - PETrigOutEPLastFrame
+  - PETrigOutEPDelay1
+  - PETrigOutEPDelay2
+  - PETrigOutDDDDelay
+  - PETrigOutEdge
+
 R2-10 (9-January-2020)
 ----
 * Updated vendor files to release 3.3.13115.  This release is compatible with Windows 10.
