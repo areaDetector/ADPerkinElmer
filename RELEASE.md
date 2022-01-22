@@ -22,8 +22,10 @@ files respectively, in the configure/ directory of the appropriate release of th
 
 Release Notes
 =============
-R2-11 (XXX-December-2020)
+R2-11 (22-January-2022)
 ----
+* Updated vendor files to those in XIS_Inst_Package_X33.5.1479.16862.zip.
+  That installation file can be found here: https://cars.uchicago.edu/data/PerkinElmer
 * Added new records to control trigger output signal
   - PETrigOutSignal
   - PETrigOutEPLength
