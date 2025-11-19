@@ -810,7 +810,6 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
   int           acquiring;
   NDArray       *pImage;
   NDDataType_t  dataType;
-  epicsTimeStamp currentTime;
   static const char *functionName = "endFrameCallback";
     
   asynPrint(pasynUserSelf, ASYN_TRACE_FLOW,
@@ -937,9 +936,7 @@ void PerkinElmer::endFrameCallback(HACQDESC hAcqDesc)
   arrayCounter++;
   setIntegerParam(NDArrayCounter, arrayCounter);
   pImage->uniqueId = arrayCounter;
-  epicsTimeGetCurrent(&currentTime);
-  pImage->timeStamp = currentTime.secPastEpoch + currentTime.nsec / 1.e9;
-  updateTimeStamp(&pImage->epicsTS);
+  updateTimeStamps(pImage);
 
   /* Get any attributes that have been defined for this driver */
   getAttributes(pImage->pAttributeList);
